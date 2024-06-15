@@ -1,0 +1,1569 @@
+<!DOCTYPE html>
+<html lang="fr-FR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="profile" href="http://gmpg.org/xfn/11">
+<link rel="pingback" href="https://laclassedemallory.net/xmlrpc.php">
+
+<title>Non classé &#8211; La classe de Mallory</title>
+<meta name='robots' content='max-image-preview:large' />
+
+<!-- Async WordPress.com Remote Login -->
+<script id="wpcom_remote_login_js">
+var wpcom_remote_login_extra_auth = '';
+function wpcom_remote_login_remove_dom_node_id( element_id ) {
+	var dom_node = document.getElementById( element_id );
+	if ( dom_node ) { dom_node.parentNode.removeChild( dom_node ); }
+}
+function wpcom_remote_login_remove_dom_node_classes( class_name ) {
+	var dom_nodes = document.querySelectorAll( '.' + class_name );
+	for ( var i = 0; i < dom_nodes.length; i++ ) {
+		dom_nodes[ i ].parentNode.removeChild( dom_nodes[ i ] );
+	}
+}
+function wpcom_remote_login_final_cleanup() {
+	wpcom_remote_login_remove_dom_node_classes( "wpcom_remote_login_msg" );
+	wpcom_remote_login_remove_dom_node_id( "wpcom_remote_login_key" );
+	wpcom_remote_login_remove_dom_node_id( "wpcom_remote_login_validate" );
+	wpcom_remote_login_remove_dom_node_id( "wpcom_remote_login_js" );
+	wpcom_remote_login_remove_dom_node_id( "wpcom_request_access_iframe" );
+	wpcom_remote_login_remove_dom_node_id( "wpcom_request_access_styles" );
+}
+
+// Watch for messages back from the remote login
+window.addEventListener( "message", function( e ) {
+	if ( e.origin === "https://r-login.wordpress.com" ) {
+		var data = {};
+		try {
+			data = JSON.parse( e.data );
+		} catch( e ) {
+			wpcom_remote_login_final_cleanup();
+			return;
+		}
+
+		if ( data.msg === 'LOGIN' ) {
+			// Clean up the login check iframe
+			wpcom_remote_login_remove_dom_node_id( "wpcom_remote_login_key" );
+
+			var id_regex = new RegExp( /^[0-9]+$/ );
+			var token_regex = new RegExp( /^.*|.*|.*$/ );
+			if (
+				token_regex.test( data.token )
+				&& id_regex.test( data.wpcomid )
+			) {
+				// We have everything we need to ask for a login
+				var script = document.createElement( "script" );
+				script.setAttribute( "id", "wpcom_remote_login_validate" );
+				script.src = '/remote-login.php?wpcom_remote_login=validate'
+					+ '&wpcomid=' + data.wpcomid
+					+ '&token=' + encodeURIComponent( data.token )
+					+ '&host=' + window.location.protocol
+					+ '//' + window.location.hostname
+					+ '&postid=12430'
+					+ '&is_singular=';
+				document.body.appendChild( script );
+			}
+
+			return;
+		}
+
+		// Safari ITP, not logged in, so redirect
+		if ( data.msg === 'LOGIN-REDIRECT' ) {
+			window.location = 'https://wordpress.com/log-in?redirect_to=' + window.location.href;
+			return;
+		}
+
+		// Safari ITP, storage access failed, remove the request
+		if ( data.msg === 'LOGIN-REMOVE' ) {
+			var css_zap = 'html { -webkit-transition: margin-top 1s; transition: margin-top 1s; } /* 9001 */ html { margin-top: 0 !important; } * html body { margin-top: 0 !important; } @media screen and ( max-width: 782px ) { html { margin-top: 0 !important; } * html body { margin-top: 0 !important; } }';
+			var style_zap = document.createElement( 'style' );
+			style_zap.type = 'text/css';
+			style_zap.appendChild( document.createTextNode( css_zap ) );
+			document.body.appendChild( style_zap );
+
+			var e = document.getElementById( 'wpcom_request_access_iframe' );
+			e.parentNode.removeChild( e );
+
+			document.cookie = 'wordpress_com_login_access=denied; path=/; max-age=31536000';
+
+			return;
+		}
+
+		// Safari ITP
+		if ( data.msg === 'REQUEST_ACCESS' ) {
+			console.log( 'request access: safari' );
+
+			// Check ITP iframe enable/disable knob
+			if ( wpcom_remote_login_extra_auth !== 'safari_itp_iframe' ) {
+				return;
+			}
+
+			// If we are in a "private window" there is no ITP.
+			var private_window = false;
+			try {
+				var opendb = window.openDatabase( null, null, null, null );
+			} catch( e ) {
+				private_window = true;
+			}
+
+			if ( private_window ) {
+				console.log( 'private window' );
+				return;
+			}
+
+			var iframe = document.createElement( 'iframe' );
+			iframe.id = 'wpcom_request_access_iframe';
+			iframe.setAttribute( 'scrolling', 'no' );
+			iframe.setAttribute( 'sandbox', 'allow-storage-access-by-user-activation allow-scripts allow-same-origin allow-top-navigation-by-user-activation' );
+			iframe.src = 'https://r-login.wordpress.com/remote-login.php?wpcom_remote_login=request_access&origin=' + encodeURIComponent( data.origin ) + '&wpcomid=' + encodeURIComponent( data.wpcomid );
+
+			var css = 'html { -webkit-transition: margin-top 1s; transition: margin-top 1s; } /* 9001 */ html { margin-top: 46px !important; } * html body { margin-top: 46px !important; } @media screen and ( max-width: 660px ) { html { margin-top: 71px !important; } * html body { margin-top: 71px !important; } #wpcom_request_access_iframe { display: block; height: 71px !important; } } #wpcom_request_access_iframe { border: 0px; height: 46px; position: fixed; top: 0; left: 0; width: 100%; min-width: 100%; z-index: 99999; background: #23282d; } ';
+
+			var style = document.createElement( 'style' );
+			style.type = 'text/css';
+			style.id = 'wpcom_request_access_styles';
+			style.appendChild( document.createTextNode( css ) );
+			document.body.appendChild( style );
+
+			document.body.appendChild( iframe );
+		}
+
+		if ( data.msg === 'DONE' ) {
+			wpcom_remote_login_final_cleanup();
+		}
+	}
+}, false );
+
+// Inject the remote login iframe after the page has had a chance to load
+// more critical resources
+window.addEventListener( "DOMContentLoaded", function( e ) {
+	var iframe = document.createElement( "iframe" );
+	iframe.style.display = "none";
+	iframe.setAttribute( "scrolling", "no" );
+	iframe.setAttribute( "id", "wpcom_remote_login_key" );
+	iframe.src = "https://r-login.wordpress.com/remote-login.php"
+		+ "?wpcom_remote_login=key"
+		+ "&origin=aHR0cHM6Ly9sYWNsYXNzZWRlbWFsbG9yeS5uZXQ%3D"
+		+ "&wpcomid=125038514"
+		+ "&time=1718254349";
+	document.body.appendChild( iframe );
+}, false );
+</script>
+<link rel='dns-prefetch' href='//s0.wp.com' />
+<link rel='dns-prefetch' href='//fonts-api.wp.com' />
+<link rel='dns-prefetch' href='//s.pubmine.com' />
+<link rel='dns-prefetch' href='//x.bidswitch.net' />
+<link rel='dns-prefetch' href='//static.criteo.net' />
+<link rel='dns-prefetch' href='//ib.adnxs.com' />
+<link rel='dns-prefetch' href='//aax.amazon-adsystem.com' />
+<link rel='dns-prefetch' href='//bidder.criteo.com' />
+<link rel='dns-prefetch' href='//cas.criteo.com' />
+<link rel='dns-prefetch' href='//gum.criteo.com' />
+<link rel='dns-prefetch' href='//ads.pubmatic.com' />
+<link rel='dns-prefetch' href='//gads.pubmatic.com' />
+<link rel='dns-prefetch' href='//tpc.googlesyndication.com' />
+<link rel='dns-prefetch' href='//ad.doubleclick.net' />
+<link rel='dns-prefetch' href='//googleads.g.doubleclick.net' />
+<link rel='dns-prefetch' href='//www.googletagservices.com' />
+<link rel='dns-prefetch' href='//cdn.switchadhub.com' />
+<link rel='dns-prefetch' href='//delivery.g.switchadhub.com' />
+<link rel='dns-prefetch' href='//delivery.swid.switchadhub.com' />
+<link rel='dns-prefetch' href='//a.teads.tv' />
+<link rel='dns-prefetch' href='//prebid.media.net' />
+<link rel='dns-prefetch' href='//adserver-us.adtech.advertising.com' />
+<link rel='dns-prefetch' href='//fastlane.rubiconproject.com' />
+<link rel='dns-prefetch' href='//prebid-server.rubiconproject.com' />
+<link rel='dns-prefetch' href='//hb-api.omnitagjs.com' />
+<link rel='dns-prefetch' href='//mtrx.go.sonobi.com' />
+<link rel='dns-prefetch' href='//apex.go.sonobi.com' />
+<link rel='dns-prefetch' href='//u.openx.net' />
+<link rel="alternate" type="application/rss+xml" title="La classe de Mallory &raquo; Flux" href="https://laclassedemallory.net/feed/" />
+<link rel="alternate" type="application/rss+xml" title="La classe de Mallory &raquo; Flux des commentaires" href="https://laclassedemallory.net/comments/feed/" />
+<link rel="alternate" type="application/rss+xml" title="La classe de Mallory &raquo; Flux de la catégorie Non classé" href="https://laclassedemallory.net/category/non-classe/feed/" />
+	<script type="text/javascript">
+		/* <![CDATA[ */
+		function addLoadEvent(func) {
+			var oldonload = window.onload;
+			if (typeof window.onload != 'function') {
+				window.onload = func;
+			} else {
+				window.onload = function () {
+					oldonload();
+					func();
+				}
+			}
+		}
+		/* ]]> */
+	</script>
+	<script type="text/javascript">
+/* <![CDATA[ */
+window._wpemojiSettings = {"baseUrl":"https:\/\/s0.wp.com\/wp-content\/mu-plugins\/wpcom-smileys\/twemoji\/2\/72x72\/","ext":".png","svgUrl":"https:\/\/s0.wp.com\/wp-content\/mu-plugins\/wpcom-smileys\/twemoji\/2\/svg\/","svgExt":".svg","source":{"concatemoji":"https:\/\/s0.wp.com\/wp-includes\/js\/wp-emoji-release.min.js?m=1710334132i&ver=6.6-beta2-58393"}};
+/*! This file is auto-generated */
+!function(i,n){var o,s,e;function c(e){try{var t={supportTests:e,timestamp:(new Date).valueOf()};sessionStorage.setItem(o,JSON.stringify(t))}catch(e){}}function p(e,t,n){e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(t,0,0);var t=new Uint32Array(e.getImageData(0,0,e.canvas.width,e.canvas.height).data),r=(e.clearRect(0,0,e.canvas.width,e.canvas.height),e.fillText(n,0,0),new Uint32Array(e.getImageData(0,0,e.canvas.width,e.canvas.height).data));return t.every(function(e,t){return e===r[t]})}function u(e,t,n){switch(t){case"flag":return n(e,"\ud83c\udff3\ufe0f\u200d\u26a7\ufe0f","\ud83c\udff3\ufe0f\u200b\u26a7\ufe0f")?!1:!n(e,"\ud83c\uddfa\ud83c\uddf3","\ud83c\uddfa\u200b\ud83c\uddf3")&&!n(e,"\ud83c\udff4\udb40\udc67\udb40\udc62\udb40\udc65\udb40\udc6e\udb40\udc67\udb40\udc7f","\ud83c\udff4\u200b\udb40\udc67\u200b\udb40\udc62\u200b\udb40\udc65\u200b\udb40\udc6e\u200b\udb40\udc67\u200b\udb40\udc7f");case"emoji":return!n(e,"\ud83d\udc26\u200d\u2b1b","\ud83d\udc26\u200b\u2b1b")}return!1}function f(e,t,n){var r="undefined"!=typeof WorkerGlobalScope&&self instanceof WorkerGlobalScope?new OffscreenCanvas(300,150):i.createElement("canvas"),a=r.getContext("2d",{willReadFrequently:!0}),o=(a.textBaseline="top",a.font="600 32px Arial",{});return e.forEach(function(e){o[e]=t(a,e,n)}),o}function t(e){var t=i.createElement("script");t.src=e,t.defer=!0,i.head.appendChild(t)}"undefined"!=typeof Promise&&(o="wpEmojiSettingsSupports",s=["flag","emoji"],n.supports={everything:!0,everythingExceptFlag:!0},e=new Promise(function(e){i.addEventListener("DOMContentLoaded",e,{once:!0})}),new Promise(function(t){var n=function(){try{var e=JSON.parse(sessionStorage.getItem(o));if("object"==typeof e&&"number"==typeof e.timestamp&&(new Date).valueOf()<e.timestamp+604800&&"object"==typeof e.supportTests)return e.supportTests}catch(e){}return null}();if(!n){if("undefined"!=typeof Worker&&"undefined"!=typeof OffscreenCanvas&&"undefined"!=typeof URL&&URL.createObjectURL&&"undefined"!=typeof Blob)try{var e="postMessage("+f.toString()+"("+[JSON.stringify(s),u.toString(),p.toString()].join(",")+"));",r=new Blob([e],{type:"text/javascript"}),a=new Worker(URL.createObjectURL(r),{name:"wpTestEmojiSupports"});return void(a.onmessage=function(e){c(n=e.data),a.terminate(),t(n)})}catch(e){}c(n=f(s,u,p))}t(n)}).then(function(e){for(var t in e)n.supports[t]=e[t],n.supports.everything=n.supports.everything&&n.supports[t],"flag"!==t&&(n.supports.everythingExceptFlag=n.supports.everythingExceptFlag&&n.supports[t]);n.supports.everythingExceptFlag=n.supports.everythingExceptFlag&&!n.supports.flag,n.DOMReady=!1,n.readyCallback=function(){n.DOMReady=!0}}).then(function(){return e}).then(function(){var e;n.supports.everything||(n.readyCallback(),(e=n.source||{}).concatemoji?t(e.concatemoji):e.wpemoji&&e.twemoji&&(t(e.twemoji),t(e.wpemoji)))}))}((window,document),window._wpemojiSettings);
+/* ]]> */
+</script>
+<link crossorigin='anonymous' rel='stylesheet' id='all-css-0-1' href='https://s0.wp.com/_static/??/wp-content/blog-plugins/wordads/global.css,/wp-content/mu-plugins/jetpack-plugin/moon/modules/infinite-scroll/infinity.css?m=1685131895j&cssminify=yes' type='text/css' media='all' />
+<style id='wp-emoji-styles-inline-css'>
+
+	img.wp-smiley, img.emoji {
+		display: inline !important;
+		border: none !important;
+		box-shadow: none !important;
+		height: 1em !important;
+		width: 1em !important;
+		margin: 0 0.07em !important;
+		vertical-align: -0.1em !important;
+		background: none !important;
+		padding: 0 !important;
+	}
+</style>
+<link crossorigin='anonymous' rel='stylesheet' id='all-css-2-1' href='https://s0.wp.com/wp-content/plugins/gutenberg-core/v18.4.1/build/block-library/style.css?m=1716578158i&cssminify=yes' type='text/css' media='all' />
+<style id='wp-block-library-inline-css'>
+.has-text-align-justify {
+	text-align:justify;
+}
+.wp-block-cover__image-background.has-parallax {
+	background-size: cover;
+}
+.has-text-align-justify{text-align:justify;}
+</style>
+<link crossorigin='anonymous' rel='stylesheet' id='all-css-4-1' href='https://s0.wp.com/_static/??-eJzTLy/QzcxLzilNSS3WzyrWz01NyUxMzUnNTc0rQeEU5CRWphbp5qSmJyZX6uVm5uklFxfr6OPTDpRD5sM02efaGpoZmFkYGRuZGmQBAHPvL0Y=&cssminify=yes' type='text/css' media='all' />
+<style id='jetpack-sharing-buttons-style-inline-css'>
+.jetpack-sharing-buttons__services-list{display:flex;flex-direction:row;flex-wrap:wrap;gap:0;list-style-type:none;margin:5px;padding:0}.jetpack-sharing-buttons__services-list.has-small-icon-size{font-size:12px}.jetpack-sharing-buttons__services-list.has-normal-icon-size{font-size:16px}.jetpack-sharing-buttons__services-list.has-large-icon-size{font-size:24px}.jetpack-sharing-buttons__services-list.has-huge-icon-size{font-size:36px}@media print{.jetpack-sharing-buttons__services-list{display:none!important}}.editor-styles-wrapper .wp-block-jetpack-sharing-buttons{gap:0;padding-inline-start:0}ul.jetpack-sharing-buttons__services-list.has-background{padding:1.25em 2.375em}
+</style>
+<link crossorigin='anonymous' rel='stylesheet' id='all-css-6-1' href='https://s0.wp.com/_static/??-eJyVjEEOwiAQAD/ksgGN4sH4Fko3hJYCYZea/r49mF6Nx0lmBj8VfMlCWbCmHmJmDP3AgVqAIRU/M04k1fkZkttKFwgtjsiyJVKe+YL/LJqTmAP/yH35ZkZpqzRwXGoiaLSqG46R5TTgHL2Xl75bba/GPB/TDthVT3U=&cssminify=yes' type='text/css' media='all' />
+<style id='classic-theme-styles-inline-css'>
+/*! This file is auto-generated */
+.wp-block-button__link{color:#fff;background-color:#32373c;border-radius:9999px;box-shadow:none;text-decoration:none;padding:calc(.667em + 2px) calc(1.333em + 2px);font-size:1.125em}.wp-block-file__button{background:#32373c;color:#fff;text-decoration:none}
+</style>
+<link crossorigin='anonymous' rel='stylesheet' id='all-css-8-1' href='https://s0.wp.com/_static/??-eJx9jcEKg0AMRH+oaVhorR7Eb9E16IpZg8min2889FZ6GYbhPQYPgbhlo2zIBWQtU8qKcdvJd5be0AmmMfW0Ejv2jKoP/K0daZzIXNdvB6PzvyJ+A8MgO6mCJ6fCYLN/6e113IZXU9WfUL/DcgHSTkDo&cssminify=yes' type='text/css' media='all' />
+<style id='global-styles-inline-css'>
+:root{--wp--preset--aspect-ratio--square: 1;--wp--preset--aspect-ratio--4-3: 4/3;--wp--preset--aspect-ratio--3-4: 3/4;--wp--preset--aspect-ratio--3-2: 3/2;--wp--preset--aspect-ratio--2-3: 2/3;--wp--preset--aspect-ratio--16-9: 16/9;--wp--preset--aspect-ratio--9-16: 9/16;--wp--preset--color--black: #000000;--wp--preset--color--cyan-bluish-gray: #abb8c3;--wp--preset--color--white: #ffffff;--wp--preset--color--pale-pink: #f78da7;--wp--preset--color--vivid-red: #cf2e2e;--wp--preset--color--luminous-vivid-orange: #ff6900;--wp--preset--color--luminous-vivid-amber: #fcb900;--wp--preset--color--light-green-cyan: #7bdcb5;--wp--preset--color--vivid-green-cyan: #00d084;--wp--preset--color--pale-cyan-blue: #8ed1fc;--wp--preset--color--vivid-cyan-blue: #0693e3;--wp--preset--color--vivid-purple: #9b51e0;--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple: linear-gradient(135deg,rgba(6,147,227,1) 0%,rgb(155,81,224) 100%);--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan: linear-gradient(135deg,rgb(122,220,180) 0%,rgb(0,208,130) 100%);--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange: linear-gradient(135deg,rgba(252,185,0,1) 0%,rgba(255,105,0,1) 100%);--wp--preset--gradient--luminous-vivid-orange-to-vivid-red: linear-gradient(135deg,rgba(255,105,0,1) 0%,rgb(207,46,46) 100%);--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray: linear-gradient(135deg,rgb(238,238,238) 0%,rgb(169,184,195) 100%);--wp--preset--gradient--cool-to-warm-spectrum: linear-gradient(135deg,rgb(74,234,220) 0%,rgb(151,120,209) 20%,rgb(207,42,186) 40%,rgb(238,44,130) 60%,rgb(251,105,98) 80%,rgb(254,248,76) 100%);--wp--preset--gradient--blush-light-purple: linear-gradient(135deg,rgb(255,206,236) 0%,rgb(152,150,240) 100%);--wp--preset--gradient--blush-bordeaux: linear-gradient(135deg,rgb(254,205,165) 0%,rgb(254,45,45) 50%,rgb(107,0,62) 100%);--wp--preset--gradient--luminous-dusk: linear-gradient(135deg,rgb(255,203,112) 0%,rgb(199,81,192) 50%,rgb(65,88,208) 100%);--wp--preset--gradient--pale-ocean: linear-gradient(135deg,rgb(255,245,203) 0%,rgb(182,227,212) 50%,rgb(51,167,181) 100%);--wp--preset--gradient--electric-grass: linear-gradient(135deg,rgb(202,248,128) 0%,rgb(113,206,126) 100%);--wp--preset--gradient--midnight: linear-gradient(135deg,rgb(2,3,129) 0%,rgb(40,116,252) 100%);--wp--preset--font-size--small: 13px;--wp--preset--font-size--medium: 20px;--wp--preset--font-size--large: 36px;--wp--preset--font-size--x-large: 42px;--wp--preset--font-family--albert-sans: 'Albert Sans', sans-serif;--wp--preset--font-family--alegreya: Alegreya, serif;--wp--preset--font-family--arvo: Arvo, serif;--wp--preset--font-family--bodoni-moda: 'Bodoni Moda', serif;--wp--preset--font-family--bricolage-grotesque: 'Bricolage Grotesque', sans-serif;--wp--preset--font-family--cabin: Cabin, sans-serif;--wp--preset--font-family--chivo: Chivo, sans-serif;--wp--preset--font-family--commissioner: Commissioner, sans-serif;--wp--preset--font-family--cormorant: Cormorant, serif;--wp--preset--font-family--courier-prime: 'Courier Prime', monospace;--wp--preset--font-family--crimson-pro: 'Crimson Pro', serif;--wp--preset--font-family--dm-mono: 'DM Mono', monospace;--wp--preset--font-family--dm-sans: 'DM Sans', sans-serif;--wp--preset--font-family--dm-serif-display: 'DM Serif Display', serif;--wp--preset--font-family--domine: Domine, serif;--wp--preset--font-family--eb-garamond: 'EB Garamond', serif;--wp--preset--font-family--epilogue: Epilogue, sans-serif;--wp--preset--font-family--fahkwang: Fahkwang, sans-serif;--wp--preset--font-family--figtree: Figtree, sans-serif;--wp--preset--font-family--fira-sans: 'Fira Sans', sans-serif;--wp--preset--font-family--fjalla-one: 'Fjalla One', sans-serif;--wp--preset--font-family--fraunces: Fraunces, serif;--wp--preset--font-family--gabarito: Gabarito, system-ui;--wp--preset--font-family--ibm-plex-mono: 'IBM Plex Mono', monospace;--wp--preset--font-family--ibm-plex-sans: 'IBM Plex Sans', sans-serif;--wp--preset--font-family--ibarra-real-nova: 'Ibarra Real Nova', serif;--wp--preset--font-family--instrument-serif: 'Instrument Serif', serif;--wp--preset--font-family--inter: Inter, sans-serif;--wp--preset--font-family--josefin-sans: 'Josefin Sans', sans-serif;--wp--preset--font-family--jost: Jost, sans-serif;--wp--preset--font-family--libre-baskerville: 'Libre Baskerville', serif;--wp--preset--font-family--libre-franklin: 'Libre Franklin', sans-serif;--wp--preset--font-family--literata: Literata, serif;--wp--preset--font-family--lora: Lora, serif;--wp--preset--font-family--merriweather: Merriweather, serif;--wp--preset--font-family--montserrat: Montserrat, sans-serif;--wp--preset--font-family--newsreader: Newsreader, serif;--wp--preset--font-family--noto-sans-mono: 'Noto Sans Mono', sans-serif;--wp--preset--font-family--nunito: Nunito, sans-serif;--wp--preset--font-family--open-sans: 'Open Sans', sans-serif;--wp--preset--font-family--overpass: Overpass, sans-serif;--wp--preset--font-family--pt-serif: 'PT Serif', serif;--wp--preset--font-family--petrona: Petrona, serif;--wp--preset--font-family--piazzolla: Piazzolla, serif;--wp--preset--font-family--playfair-display: 'Playfair Display', serif;--wp--preset--font-family--plus-jakarta-sans: 'Plus Jakarta Sans', sans-serif;--wp--preset--font-family--poppins: Poppins, sans-serif;--wp--preset--font-family--raleway: Raleway, sans-serif;--wp--preset--font-family--roboto: Roboto, sans-serif;--wp--preset--font-family--roboto-slab: 'Roboto Slab', serif;--wp--preset--font-family--rubik: Rubik, sans-serif;--wp--preset--font-family--rufina: Rufina, serif;--wp--preset--font-family--sora: Sora, sans-serif;--wp--preset--font-family--source-sans-3: 'Source Sans 3', sans-serif;--wp--preset--font-family--source-serif-4: 'Source Serif 4', serif;--wp--preset--font-family--space-mono: 'Space Mono', monospace;--wp--preset--font-family--syne: Syne, sans-serif;--wp--preset--font-family--texturina: Texturina, serif;--wp--preset--font-family--urbanist: Urbanist, sans-serif;--wp--preset--font-family--work-sans: 'Work Sans', sans-serif;--wp--preset--spacing--20: 0.44rem;--wp--preset--spacing--30: 0.67rem;--wp--preset--spacing--40: 1rem;--wp--preset--spacing--50: 1.5rem;--wp--preset--spacing--60: 2.25rem;--wp--preset--spacing--70: 3.38rem;--wp--preset--spacing--80: 5.06rem;--wp--preset--shadow--natural: 6px 6px 9px rgba(0, 0, 0, 0.2);--wp--preset--shadow--deep: 12px 12px 50px rgba(0, 0, 0, 0.4);--wp--preset--shadow--sharp: 6px 6px 0px rgba(0, 0, 0, 0.2);--wp--preset--shadow--outlined: 6px 6px 0px -3px rgba(255, 255, 255, 1), 6px 6px rgba(0, 0, 0, 1);--wp--preset--shadow--crisp: 6px 6px 0px rgba(0, 0, 0, 1);}:where(.is-layout-flex){gap: 0.5em;}:where(.is-layout-grid){gap: 0.5em;}body .is-layout-flex{display: flex;}.is-layout-flex{flex-wrap: wrap;align-items: center;}.is-layout-flex > :is(*, div){margin: 0;}body .is-layout-grid{display: grid;}.is-layout-grid > :is(*, div){margin: 0;}:where(.wp-block-columns.is-layout-flex){gap: 2em;}:where(.wp-block-columns.is-layout-grid){gap: 2em;}:where(.wp-block-post-template.is-layout-flex){gap: 1.25em;}:where(.wp-block-post-template.is-layout-grid){gap: 1.25em;}.has-black-color{color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-color{color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-color{color: var(--wp--preset--color--white) !important;}.has-pale-pink-color{color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-color{color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-color{color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-color{color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-color{color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-color{color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-color{color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-color{color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-color{color: var(--wp--preset--color--vivid-purple) !important;}.has-black-background-color{background-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-background-color{background-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-background-color{background-color: var(--wp--preset--color--white) !important;}.has-pale-pink-background-color{background-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-background-color{background-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-background-color{background-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-background-color{background-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-background-color{background-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-background-color{background-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-background-color{background-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-background-color{background-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-background-color{background-color: var(--wp--preset--color--vivid-purple) !important;}.has-black-border-color{border-color: var(--wp--preset--color--black) !important;}.has-cyan-bluish-gray-border-color{border-color: var(--wp--preset--color--cyan-bluish-gray) !important;}.has-white-border-color{border-color: var(--wp--preset--color--white) !important;}.has-pale-pink-border-color{border-color: var(--wp--preset--color--pale-pink) !important;}.has-vivid-red-border-color{border-color: var(--wp--preset--color--vivid-red) !important;}.has-luminous-vivid-orange-border-color{border-color: var(--wp--preset--color--luminous-vivid-orange) !important;}.has-luminous-vivid-amber-border-color{border-color: var(--wp--preset--color--luminous-vivid-amber) !important;}.has-light-green-cyan-border-color{border-color: var(--wp--preset--color--light-green-cyan) !important;}.has-vivid-green-cyan-border-color{border-color: var(--wp--preset--color--vivid-green-cyan) !important;}.has-pale-cyan-blue-border-color{border-color: var(--wp--preset--color--pale-cyan-blue) !important;}.has-vivid-cyan-blue-border-color{border-color: var(--wp--preset--color--vivid-cyan-blue) !important;}.has-vivid-purple-border-color{border-color: var(--wp--preset--color--vivid-purple) !important;}.has-vivid-cyan-blue-to-vivid-purple-gradient-background{background: var(--wp--preset--gradient--vivid-cyan-blue-to-vivid-purple) !important;}.has-light-green-cyan-to-vivid-green-cyan-gradient-background{background: var(--wp--preset--gradient--light-green-cyan-to-vivid-green-cyan) !important;}.has-luminous-vivid-amber-to-luminous-vivid-orange-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-amber-to-luminous-vivid-orange) !important;}.has-luminous-vivid-orange-to-vivid-red-gradient-background{background: var(--wp--preset--gradient--luminous-vivid-orange-to-vivid-red) !important;}.has-very-light-gray-to-cyan-bluish-gray-gradient-background{background: var(--wp--preset--gradient--very-light-gray-to-cyan-bluish-gray) !important;}.has-cool-to-warm-spectrum-gradient-background{background: var(--wp--preset--gradient--cool-to-warm-spectrum) !important;}.has-blush-light-purple-gradient-background{background: var(--wp--preset--gradient--blush-light-purple) !important;}.has-blush-bordeaux-gradient-background{background: var(--wp--preset--gradient--blush-bordeaux) !important;}.has-luminous-dusk-gradient-background{background: var(--wp--preset--gradient--luminous-dusk) !important;}.has-pale-ocean-gradient-background{background: var(--wp--preset--gradient--pale-ocean) !important;}.has-electric-grass-gradient-background{background: var(--wp--preset--gradient--electric-grass) !important;}.has-midnight-gradient-background{background: var(--wp--preset--gradient--midnight) !important;}.has-small-font-size{font-size: var(--wp--preset--font-size--small) !important;}.has-medium-font-size{font-size: var(--wp--preset--font-size--medium) !important;}.has-large-font-size{font-size: var(--wp--preset--font-size--large) !important;}.has-x-large-font-size{font-size: var(--wp--preset--font-size--x-large) !important;}.has-albert-sans-font-family{font-family: var(--wp--preset--font-family--albert-sans) !important;}.has-alegreya-font-family{font-family: var(--wp--preset--font-family--alegreya) !important;}.has-arvo-font-family{font-family: var(--wp--preset--font-family--arvo) !important;}.has-bodoni-moda-font-family{font-family: var(--wp--preset--font-family--bodoni-moda) !important;}.has-bricolage-grotesque-font-family{font-family: var(--wp--preset--font-family--bricolage-grotesque) !important;}.has-cabin-font-family{font-family: var(--wp--preset--font-family--cabin) !important;}.has-chivo-font-family{font-family: var(--wp--preset--font-family--chivo) !important;}.has-commissioner-font-family{font-family: var(--wp--preset--font-family--commissioner) !important;}.has-cormorant-font-family{font-family: var(--wp--preset--font-family--cormorant) !important;}.has-courier-prime-font-family{font-family: var(--wp--preset--font-family--courier-prime) !important;}.has-crimson-pro-font-family{font-family: var(--wp--preset--font-family--crimson-pro) !important;}.has-dm-mono-font-family{font-family: var(--wp--preset--font-family--dm-mono) !important;}.has-dm-sans-font-family{font-family: var(--wp--preset--font-family--dm-sans) !important;}.has-dm-serif-display-font-family{font-family: var(--wp--preset--font-family--dm-serif-display) !important;}.has-domine-font-family{font-family: var(--wp--preset--font-family--domine) !important;}.has-eb-garamond-font-family{font-family: var(--wp--preset--font-family--eb-garamond) !important;}.has-epilogue-font-family{font-family: var(--wp--preset--font-family--epilogue) !important;}.has-fahkwang-font-family{font-family: var(--wp--preset--font-family--fahkwang) !important;}.has-figtree-font-family{font-family: var(--wp--preset--font-family--figtree) !important;}.has-fira-sans-font-family{font-family: var(--wp--preset--font-family--fira-sans) !important;}.has-fjalla-one-font-family{font-family: var(--wp--preset--font-family--fjalla-one) !important;}.has-fraunces-font-family{font-family: var(--wp--preset--font-family--fraunces) !important;}.has-gabarito-font-family{font-family: var(--wp--preset--font-family--gabarito) !important;}.has-ibm-plex-mono-font-family{font-family: var(--wp--preset--font-family--ibm-plex-mono) !important;}.has-ibm-plex-sans-font-family{font-family: var(--wp--preset--font-family--ibm-plex-sans) !important;}.has-ibarra-real-nova-font-family{font-family: var(--wp--preset--font-family--ibarra-real-nova) !important;}.has-instrument-serif-font-family{font-family: var(--wp--preset--font-family--instrument-serif) !important;}.has-inter-font-family{font-family: var(--wp--preset--font-family--inter) !important;}.has-josefin-sans-font-family{font-family: var(--wp--preset--font-family--josefin-sans) !important;}.has-jost-font-family{font-family: var(--wp--preset--font-family--jost) !important;}.has-libre-baskerville-font-family{font-family: var(--wp--preset--font-family--libre-baskerville) !important;}.has-libre-franklin-font-family{font-family: var(--wp--preset--font-family--libre-franklin) !important;}.has-literata-font-family{font-family: var(--wp--preset--font-family--literata) !important;}.has-lora-font-family{font-family: var(--wp--preset--font-family--lora) !important;}.has-merriweather-font-family{font-family: var(--wp--preset--font-family--merriweather) !important;}.has-montserrat-font-family{font-family: var(--wp--preset--font-family--montserrat) !important;}.has-newsreader-font-family{font-family: var(--wp--preset--font-family--newsreader) !important;}.has-noto-sans-mono-font-family{font-family: var(--wp--preset--font-family--noto-sans-mono) !important;}.has-nunito-font-family{font-family: var(--wp--preset--font-family--nunito) !important;}.has-open-sans-font-family{font-family: var(--wp--preset--font-family--open-sans) !important;}.has-overpass-font-family{font-family: var(--wp--preset--font-family--overpass) !important;}.has-pt-serif-font-family{font-family: var(--wp--preset--font-family--pt-serif) !important;}.has-petrona-font-family{font-family: var(--wp--preset--font-family--petrona) !important;}.has-piazzolla-font-family{font-family: var(--wp--preset--font-family--piazzolla) !important;}.has-playfair-display-font-family{font-family: var(--wp--preset--font-family--playfair-display) !important;}.has-plus-jakarta-sans-font-family{font-family: var(--wp--preset--font-family--plus-jakarta-sans) !important;}.has-poppins-font-family{font-family: var(--wp--preset--font-family--poppins) !important;}.has-raleway-font-family{font-family: var(--wp--preset--font-family--raleway) !important;}.has-roboto-font-family{font-family: var(--wp--preset--font-family--roboto) !important;}.has-roboto-slab-font-family{font-family: var(--wp--preset--font-family--roboto-slab) !important;}.has-rubik-font-family{font-family: var(--wp--preset--font-family--rubik) !important;}.has-rufina-font-family{font-family: var(--wp--preset--font-family--rufina) !important;}.has-sora-font-family{font-family: var(--wp--preset--font-family--sora) !important;}.has-source-sans-3-font-family{font-family: var(--wp--preset--font-family--source-sans-3) !important;}.has-source-serif-4-font-family{font-family: var(--wp--preset--font-family--source-serif-4) !important;}.has-space-mono-font-family{font-family: var(--wp--preset--font-family--space-mono) !important;}.has-syne-font-family{font-family: var(--wp--preset--font-family--syne) !important;}.has-texturina-font-family{font-family: var(--wp--preset--font-family--texturina) !important;}.has-urbanist-font-family{font-family: var(--wp--preset--font-family--urbanist) !important;}.has-work-sans-font-family{font-family: var(--wp--preset--font-family--work-sans) !important;}
+:where(.wp-block-columns.is-layout-flex){gap: 2em;}:where(.wp-block-columns.is-layout-grid){gap: 2em;}
+:where(.wp-block-pullquote){font-size: 1.5em;line-height: 1.6;}
+:where(.wp-block-post-template.is-layout-flex){gap: 1.25em;}:where(.wp-block-post-template.is-layout-grid){gap: 1.25em;}
+</style>
+<link crossorigin='anonymous' rel='stylesheet' id='all-css-10-1' href='https://s0.wp.com/wp-content/themes/pub/button/style.css?m=1489075188i&cssminify=yes' type='text/css' media='all' />
+<style id='button-style-inline-css'>
+.cat-links, .tags-links { clip: rect(1px, 1px, 1px, 1px); height: 1px; position: absolute; overflow: hidden; width: 1px; }
+</style>
+<link rel='stylesheet' id='button-fonts-css' href='//fonts-api.wp.com/css?family=Lato%3A400%2C300%2C300italic%2C400italic%2C700%2C700italic%7CLora%3A400italic%2C700italic&#038;subset=latin%2Clatin-ext' media='all' />
+<link crossorigin='anonymous' rel='stylesheet' id='all-css-12-1' href='https://s0.wp.com/_static/??-eJyl0EEKwjAQBdALGYcilboQjyJpOsbUJBM6E4q3N1XBglIX3f0P8x8hMCZlKApGgZBV8tm6yNCjJG1u7w6BKMLZRQMWIw6uLPh33BrmDcxQuWJAhpRbaLNIcSaG5e5RjclQ+Fr8eUagLvsijq6zKAxCSSXikp7oWq7cibaDDp+0lmQyTnv1+qp5WYItkvJktLgizou6eO2GpemArSdbooVyNavT6BSO1b6pq13VHOr+AfRhwdM=&cssminify=yes' type='text/css' media='all' />
+<link crossorigin='anonymous' rel='stylesheet' id='print-css-13-1' href='https://s0.wp.com/wp-content/mu-plugins/global-print/global-print.css?m=1465851035i&cssminify=yes' type='text/css' media='print' />
+<style id='jetpack-global-styles-frontend-style-inline-css'>
+:root { --font-headings: unset; --font-base: unset; --font-headings-default: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif; --font-base-default: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif;}
+</style>
+<link crossorigin='anonymous' rel='stylesheet' id='all-css-16-1' href='https://s0.wp.com/wp-content/themes/h4/global.css?m=1420737423i&cssminify=yes' type='text/css' media='all' />
+<script type="text/javascript" id="media-video-jwt-bridge-js-extra">
+/* <![CDATA[ */
+var videopressAjax = {"ajaxUrl":"https:\/\/laclassedemallory.wordpress.com\/wp-admin\/admin-ajax.php","bridgeUrl":"\/wp-content\/mu-plugins\/jetpack-plugin\/moon\/jetpack_vendor\/automattic\/jetpack-videopress\/build\/lib\/token-bridge.js","post_id":"12430"};
+/* ]]> */
+</script>
+<script type="text/javascript" id="wpcom-actionbar-placeholder-js-extra">
+/* <![CDATA[ */
+var actionbardata = {"siteID":"125038514","postID":"0","siteURL":"https:\/\/laclassedemallory.net","xhrURL":"https:\/\/laclassedemallory.net\/wp-admin\/admin-ajax.php","nonce":"7365efcda2","isLoggedIn":"","statusMessage":"","subsEmailDefault":"instantly","proxyScriptUrl":"https:\/\/s0.wp.com\/wp-content\/js\/wpcom-proxy-request.js?ver=20211021","i18n":{"followedText":"Les nouveaux articles de ce site appara\u00eetront d\u00e9sormais dans votre <a href=\"https:\/\/wordpress.com\/\">Lecteur<\/a>","foldBar":"R\u00e9duire cette barre","unfoldBar":"\u00c9tendre cette barre"}};
+/* ]]> */
+</script>
+<script crossorigin='anonymous' type='text/javascript'  src='https://s0.wp.com/_static/??-eJyFjs1OAzEMhF8IN0ArFQ6IR0H5cSNvEzvYyZa+PVu1WwEXTiPPfPbYnRpE4Y7c3WSuSqCCMAzV58UD4oNsJntwvzktHZrK13nNiGMZCe0STp8D9XyTTSX+F4JKWX3Hn/DaVge0MjLxsoO9+Xi8zcuzwqv3MSMnUedHl+p7p3inZ0ooTdHMhUEluULBdTkiQ1BKGf82hiL53nkSTT4ZxOLNrq/H2tz8fBFgYcip6XLivb497R/3r9vtbvcyfQOrDIA+'></script>
+<script type="text/javascript" id="rlt-proxy-js-after">
+/* <![CDATA[ */
+	window.addEventListener( 'DOMContentLoaded', function() {
+		rltInitialize( {"token":null,"iframeOrigins":["https:\/\/widgets.wp.com"]} );
+	} );
+/* ]]> */
+</script>
+<link rel="EditURI" type="application/rsd+xml" title="RSD" href="https://laclassedemallory.wordpress.com/xmlrpc.php?rsd" />
+<meta name="generator" content="WordPress.com" />
+
+<!-- Jetpack Open Graph Tags -->
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Non classé &#8211; La classe de Mallory" />
+<meta property="og:url" content="https://laclassedemallory.net/category/non-classe/" />
+<meta property="og:site_name" content="La classe de Mallory" />
+<meta property="og:image" content="https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=200" />
+<meta property="og:image:width" content="200" />
+<meta property="og:image:height" content="200" />
+<meta property="og:image:alt" content="" />
+<meta property="og:locale" content="fr_FR" />
+<meta name="twitter:creator" content="@mallotine" />
+<meta name="twitter:site" content="@mallotine" />
+
+<!-- End Jetpack Open Graph Tags -->
+<link rel="search" type="application/opensearchdescription+xml" href="https://laclassedemallory.net/osd.xml" title="La classe de Mallory" />
+<link rel="search" type="application/opensearchdescription+xml" href="https://s1.wp.com/opensearch.xml" title="WordPress.com" />
+<meta name="theme-color" content="#f8f8f8" />
+<meta name="application-name" content="La classe de Mallory" /><meta name="msapplication-window" content="width=device-width;height=device-height" /><meta name="msapplication-tooltip" content="Ressources et jeux pour le cycle 3" /><meta name="description" content="Articles traitant de Non classé écrits par mallotine" />
+	<style type="text/css">
+			.site-title,
+		.site-description {
+			position: absolute;
+			clip: rect(1px, 1px, 1px, 1px);
+		}
+		</style>
+	<style type="text/css" id="custom-background-css">
+body.custom-background { background-image: url("https://s0.wp.com/wp-content/themes/pub/button/img/buttonbg20151103.png"); background-position: left top; background-size: auto; background-repeat: repeat; background-attachment: scroll; }
+</style>
+	<script type="text/javascript">
+/* <![CDATA[ */
+var wa_smart = { 'network_id': 3905, 'site_id': 560111, 'page_id': 1700829, 'blog_id': 125038514, 'post_id': null, 'theme': 'pub/button', 'target': 'iab_category=IAB5;iab_category=IAB1;iab_category=IAB19-18;iab_category=IAB19;wp_blog_id=125038514;language=fr;adflow=true', '_': { 'title': 'Publicité', 'privacy_settings': 'Réglages de confidentialité' }, 'inline': { 'format_id': 110354, 'max_slots': 20, 'max_blaze_slots': 20, 'enabled': false, 'adflow_enabled': true } }; wa_smart.cmd = [];
+/* ]]> */
+</script>
+		<script type="text/javascript">
+		function __ATA_CC() {var v = document.cookie.match('(^|;) ?personalized-ads-consent=([^;]*)(;|$)');return v ? 1 : 0;}
+		var __ATA_PP = { 'pt': 3, 'ht': 1, 'tn': 'button', 'uloggedin': 0, 'amp': false, 'consent': __ATA_CC(), 'gdpr_applies': false, 'ad': { 'label': { 'text': 'Publicités' }, 'reportAd': { 'text': 'Report this Ad' } }, 'disabled_slot_formats': [], 'siteid': 125038514, 'afp_ad_client': 'pub-3847357810504078' };
+		var __ATA = __ATA || {};
+		__ATA.cmd = __ATA.cmd || [];
+		__ATA.criteo = __ATA.criteo || {};
+		__ATA.criteo.cmd = __ATA.criteo.cmd || [];
+		</script>
+		<script type="text/javascript">
+		(function(){var g=Date.now||function(){return+new Date};function h(a,b){a:{for(var c=a.length,d="string"==typeof a?a.split(""):a,e=0;e<c;e++)if(e in d&&b.call(void 0,d[e],e,a)){b=e;break a}b=-1}return 0>b?null:"string"==typeof a?a.charAt(b):a[b]};function k(a,b,c){c=null!=c?"="+encodeURIComponent(String(c)):"";if(b+=c){c=a.indexOf("#");0>c&&(c=a.length);var d=a.indexOf("?");if(0>d||d>c){d=c;var e=""}else e=a.substring(d+1,c);a=[a.substr(0,d),e,a.substr(c)];c=a[1];a[1]=b?c?c+"&"+b:b:c;a=a[0]+(a[1]?"?"+a[1]:"")+a[2]}return a};var l=0;function m(a,b){var c=document.createElement("script");c.src=a;c.onload=function(){b&&b(void 0)};c.onerror=function(){b&&b("error")};a=document.getElementsByTagName("head");var d;a&&0!==a.length?d=a[0]:d=document.documentElement;d.appendChild(c)}function n(a){var b=void 0===b?document.cookie:b;return(b=h(b.split("; "),function(c){return-1!=c.indexOf(a+"=")}))?b.split("=")[1]:""}function p(a){return"string"==typeof a&&0<a.length}
+		function r(a,b,c){b=void 0===b?"":b;c=void 0===c?".":c;var d=[];Object.keys(a).forEach(function(e){var f=a[e],q=typeof f;"object"==q&&null!=f||"function"==q?d.push(r(f,b+e+c)):null!==f&&void 0!==f&&(e=encodeURIComponent(b+e),d.push(e+"="+encodeURIComponent(f)))});return d.filter(p).join("&")}function t(a,b){a||((window.__ATA||{}).config=b.c,m(b.url))}var u=Math.floor(1E13*Math.random()),v=window.__ATA||{};window.__ATA=v;window.__ATA.cmd=v.cmd||[];v.rid=u;v.createdAt=g();var w=window.__ATA||{},x="s.pubmine.com";
+		w&&w.serverDomain&&(x=w.serverDomain);var y="//"+x+"/conf",z=window.top===window,A=window.__ATA_PP&&window.__ATA_PP.gdpr_applies,B="boolean"===typeof A?Number(A):null,C=window.__ATA_PP||null,D=z?document.referrer?document.referrer:null:null,E=z?window.location.href:document.referrer?document.referrer:null,F,G=n("__ATA_tuuid");F=G?G:null;var H=window.innerWidth+"x"+window.innerHeight,I=n("usprivacy"),J=r({gdpr:B,pp:C,rid:u,src:D,ref:E,tuuid:F,vp:H,us_privacy:I?I:null},"",".");
+		(function(a){var b=void 0===b?"cb":b;l++;var c="callback__"+g().toString(36)+"_"+l.toString(36);a=k(a,b,c);window[c]=function(d){t(void 0,d)};m(a,function(d){d&&t(d)})})(y+"?"+J);}).call(this);
+		</script>	<script>
+		var sas_fallback = sas_fallback || [];
+		sas_fallback.push(
+			{ tag: "&lt;div id=&quot;atatags-1250385141-666a7b0d0d0ac&quot;&gt;&lt;/div&gt;&lt;script&gt;__ATA.cmd.push(function() {__ATA.initDynamicSlot({id: \'atatags-1250385141-666a7b0d0d0ac\',location: 120,formFactor: \'001\',label: {text: \'Publicités\',},creative: {reportAd: {text: \'Report this Ad\',},privacySettings: {text: \'Confidentialité\',}}});});&lt;/script&gt;", type: 'belowpost' },
+			{ tag: "&lt;div id=&quot;atatags-1250385141-{{unique_id}}&quot;&gt;&lt;/div&gt;&lt;script&gt;__ATA.cmd.push(function() {__ATA.initDynamicSlot({id: \'atatags-1250385141-{{unique_id}}\',location: 310,formFactor: \'001\',label: {text: \'Publicités\',},creative: {reportAd: {text: \'Report this Ad\',},privacySettings: {text: \'Confidentialité\',}}});});&lt;/script&gt;", type: 'inline' }
+		);
+	</script><style type="text/css" id="custom-colors-css">#infinite-handle span button:active,
+			#infinite-handle span button:focus,
+			#infinite-handle span button:hover,
+			#infinite-handle span:hover button,
+			.flex-control-paging li a.flex-active,
+			.flex-control-paging li a:hover,
+			.social-links ul a:hover,
+			.tags-links a:hover,
+			.widget_tag_cloud a:hover,
+			button:active,
+			button:focus,
+			button:hover,
+			input[type="button"]:active,
+			input[type="button"]:focus,
+			input[type="button"]:hover,
+			input[type="reset"]:active,
+			input[type="reset"]:focus,
+			input[type="reset"]:hover,
+			input[type="submit"]:active,
+			input[type="submit"]:focus,
+			input[type="submit"]:hover,
+			.page-links span.active-link,
+			.page-links a:hover span.active-link { color: #494949;}
+body { background-color: #f8f8f8;}
+#infinite-handle span button:active,
+			#infinite-handle span button:focus,
+			#infinite-handle span button:hover,
+			#infinite-handle span:hover button,
+			.flex-control-paging li a.flex-active,
+			.flex-control-paging li a:hover,
+			.social-links ul a:hover,
+			.tags-links a:hover,
+			.widget_tag_cloud a:hover,
+			button:active,
+			button:focus,
+			button:hover,
+			input[type="button"]:active,
+			input[type="button"]:focus,
+			input[type="button"]:hover,
+			input[type="reset"]:active,
+			input[type="reset"]:focus,
+			input[type="reset"]:hover,
+			input[type="submit"]:active,
+			input[type="submit"]:focus,
+			input[type="submit"]:hover,
+			.page-links span.active-link,
+			.page-links a:hover span.active-link { background-color: #ffb0ab;}
+.bypostauthor > .comment-body:first-of-type .comment-author .avatar,
+			input[type="email"]:focus,
+			input[type="password"]:focus,
+			input[type="search"]:focus,
+			input[type="text"]:focus,
+			input[type="url"]:focus,
+			textarea:focus { border-color: #ffb0ab;}
+.tags-links a:hover:after,
+			.widget_tag_cloud a:hover:after { border-left-color: #ffb0ab;}
+.tags-links a:hover:before,
+			.widget_tag_cloud a:hover:before { border-top-color: #ffb0ab;}
+.tags-links a:hover:before,
+			.widget_tag_cloud a:hover:before,
+			abbr,
+			acronym { border-bottom-color: #ffb0ab;}
+#infinite-handle span button:active,
+			#infinite-handle span button:focus,
+			#infinite-handle span button:hover,
+			#infinite-handle span:hover button,
+			button:active,
+			button:focus,
+			button:hover,
+			input[type="button"]:active,
+			input[type="button"]:focus,
+			input[type="button"]:hover,
+			input[type="reset"]:active,
+			input[type="reset"]:focus,
+			input[type="reset"]:hover,
+			input[type="submit"]:active,
+			input[type="submit"]:focus,
+			input[type="submit"]:hover { outline-color: #ffb0ab;}
+#infinite-footer .container a:hover,
+			.comment-meta .comment-metadata a:hover,
+			.entry-footer a:hover,
+			.entry-meta a:hover,
+			.required,
+			.site-footer a:hover,
+			.site-title a,
+			.site-title a:visited,
+			a,
+			a.more-link,
+			a.more-link:hover,
+			a:visited { color: #FC9C96;}
+.main-navigation .current-menu-item > a,
+			.main-navigation .current_page_ancestor > a,
+			.main-navigation .current_page_item > a,
+			.main-navigation a:hover,
+			.main-navigation a:visited:hover { color: #FC9C96;}
+</style>
+<link rel="icon" href="https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=32" sizes="32x32" />
+<link rel="icon" href="https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=192" sizes="192x192" />
+<link rel="apple-touch-icon" href="https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=180" />
+<meta name="msapplication-TileImage" content="https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=270" />
+<!-- Your Google Analytics Plugin is missing the tracking ID -->
+</head>
+
+<body class="archive category category-non-classe category-6325 custom-background customizer-styles-applied categories-hidden tags-hidden jetpack-reblog-enabled custom-colors">
+<div id="page" class="hfeed site">
+	<a class="skip-link screen-reader-text" href="#content">Accéder au contenu principal</a>
+
+	<header id="masthead" class="site-header" role="banner">
+		<div class="site-branding">
+			<a href="https://laclassedemallory.net/" class="site-logo-link" rel="home" itemprop="url"></a>							<a href="https://laclassedemallory.net/" rel="home">
+					<img src="https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-21-acc80-08.08.48.png" width="982" height="384" alt="" class="header-image">
+				</a>
+						<h1 class="site-title"><a href="https://laclassedemallory.net/" rel="home">La classe de Mallory</a></h1>
+			<h2 class="site-description">Ressources et jeux pour le cycle 3</h2>
+		</div><!-- .site-branding -->
+	</header><!-- #masthead -->
+
+	<nav id="site-navigation" class="main-navigation" role="navigation">
+		<button class="menu-toggle" aria-controls="primary-menu" aria-expanded="false">Menu</button>
+		<div class="menu-primary-container"><ul id="primary-menu" class="menu"><li id="menu-item-19" class="menu-item menu-item-type-taxonomy menu-item-object-category current-menu-item menu-item-has-children menu-item-19"><a href="https://laclassedemallory.net/category/non-classe/" aria-current="page">Français</a>
+<ul class="sub-menu">
+	<li id="menu-item-253" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-253"><a href="https://laclassedemallory.net/category/lecons-et-outils-pe-f/">Leçons et outils PE</a></li>
+	<li id="menu-item-254" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-254"><a href="https://laclassedemallory.net/category/exercices-f/">Exercices et learning apps</a></li>
+	<li id="menu-item-255" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-255"><a href="https://laclassedemallory.net/category/dictees/">Dictées</a></li>
+	<li id="menu-item-256" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-256"><a href="https://laclassedemallory.net/category/rituel-francais/">Rituels</a></li>
+	<li id="menu-item-304" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-304"><a href="https://laclassedemallory.net/category/litterature/">Littérature</a></li>
+	<li id="menu-item-7540" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-7540"><a href="https://laclassedemallory.net/category/poesie/">Poésie</a></li>
+</ul>
+</li>
+<li id="menu-item-20" class="menu-item menu-item-type-taxonomy menu-item-object-category current-menu-item menu-item-has-children menu-item-20"><a href="https://laclassedemallory.net/category/non-classe/" aria-current="page">Maths</a>
+<ul class="sub-menu">
+	<li id="menu-item-281" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-281"><a href="https://laclassedemallory.net/category/lecons-et-outils-pe-m/">Leçons et outils PE</a></li>
+	<li id="menu-item-8696" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-8696"><a href="https://laclassedemallory.net/category/calcul-mental/">calcul mental</a></li>
+	<li id="menu-item-282" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-282"><a href="https://laclassedemallory.net/category/exercices-m/">Exercices et learning apps</a></li>
+	<li id="menu-item-568" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-568"><a href="https://laclassedemallory.net/category/rituels-mathematiques/">Rituels</a></li>
+</ul>
+</li>
+<li id="menu-item-24" class="menu-item menu-item-type-taxonomy menu-item-object-category current-menu-item menu-item-has-children menu-item-24"><a href="https://laclassedemallory.net/category/non-classe/" aria-current="page">Jeux</a>
+<ul class="sub-menu">
+	<li id="menu-item-264" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-264"><a href="https://laclassedemallory.net/category/orthographe/">Orthographe</a></li>
+	<li id="menu-item-265" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-265"><a href="https://laclassedemallory.net/category/grammaire/">Grammaire</a></li>
+	<li id="menu-item-266" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-266"><a href="https://laclassedemallory.net/category/conjugaison/">Conjugaison</a></li>
+	<li id="menu-item-267" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-267"><a href="https://laclassedemallory.net/category/vocabulaire/">Vocabulaire</a></li>
+	<li id="menu-item-268" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-268"><a href="https://laclassedemallory.net/category/lecture-et-autres/">lecture et autres</a></li>
+	<li id="menu-item-269" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-269"><a href="https://laclassedemallory.net/category/numeration/">numération</a></li>
+	<li id="menu-item-270" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-270"><a href="https://laclassedemallory.net/category/operation/">calcul</a></li>
+	<li id="menu-item-271" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-271"><a href="https://laclassedemallory.net/category/geometrie/">géométrie</a></li>
+	<li id="menu-item-272" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-272"><a href="https://laclassedemallory.net/category/mesure/">mesure</a></li>
+	<li id="menu-item-273" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-273"><a href="https://laclassedemallory.net/category/autres-jeux-maths/">autres jeux maths</a></li>
+</ul>
+</li>
+<li id="menu-item-25" class="menu-item menu-item-type-taxonomy menu-item-object-category current-menu-item menu-item-has-children menu-item-25"><a href="https://laclassedemallory.net/category/non-classe/" aria-current="page">Rituels</a>
+<ul class="sub-menu">
+	<li id="menu-item-298" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-298"><a href="https://laclassedemallory.net/category/rituel-francais/">Français</a></li>
+	<li id="menu-item-299" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-299"><a href="https://laclassedemallory.net/category/rituel-maths/">Maths</a></li>
+	<li id="menu-item-10152" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-10152"><a href="https://laclassedemallory.net/category/rituel-histoire-et-geo/">Histoire et géo</a></li>
+	<li id="menu-item-301" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-301"><a href="https://laclassedemallory.net/category/rituel-sciences/">Sciences</a></li>
+	<li id="menu-item-302" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-302"><a href="https://laclassedemallory.net/category/rituel-arts/">Art et musique</a></li>
+</ul>
+</li>
+<li id="menu-item-21" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-has-children menu-item-21"><a href="https://laclassedemallory.net/category/atelier-lecture-declic/">Atelier lecture DECLIC</a>
+<ul class="sub-menu">
+	<li id="menu-item-257" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-257"><a href="https://laclassedemallory.net/category/presentation-declic/">Présentation</a></li>
+	<li id="menu-item-258" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-258"><a href="https://laclassedemallory.net/category/mini-lecons-et-ex-declic/">Mini-leçons et exercices</a></li>
+	<li id="menu-item-259" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-259"><a href="https://laclassedemallory.net/category/outils-declic/">Outils</a></li>
+</ul>
+</li>
+<li id="menu-item-22" class="menu-item menu-item-type-taxonomy menu-item-object-category current-menu-item menu-item-has-children menu-item-22"><a href="https://laclassedemallory.net/category/non-classe/" aria-current="page">Atelier ECRIT</a>
+<ul class="sub-menu">
+	<li id="menu-item-260" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-260"><a href="https://laclassedemallory.net/category/presentation-ecrit/">Présentation</a></li>
+	<li id="menu-item-261" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-261"><a href="https://laclassedemallory.net/category/mini-lecons-et-ex-ecrit/">Mini-leçons et exercices</a></li>
+	<li id="menu-item-262" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-262"><a href="https://laclassedemallory.net/category/outils-ecrit/">Outils</a></li>
+</ul>
+</li>
+<li id="menu-item-300" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-has-children menu-item-300"><a href="https://laclassedemallory.net/category/rituel-histoire-et-geo/">Histoire-Géo</a>
+<ul class="sub-menu">
+	<li id="menu-item-284" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-284"><a href="https://laclassedemallory.net/category/prehistoire/">Préhistoire</a></li>
+	<li id="menu-item-285" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-285"><a href="https://laclassedemallory.net/category/antiquite/">Antiquité</a></li>
+	<li id="menu-item-286" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-286"><a href="https://laclassedemallory.net/category/moyen-age/">Moyen-âge</a></li>
+	<li id="menu-item-287" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-287"><a href="https://laclassedemallory.net/category/temps-moderne/">Temps modernes</a></li>
+	<li id="menu-item-288" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-288"><a href="https://laclassedemallory.net/category/revolution-et-empire/">Révolution et empire</a></li>
+	<li id="menu-item-289" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-289"><a href="https://laclassedemallory.net/category/le-19eme-siecle/">Le XIXème siècle</a></li>
+	<li id="menu-item-290" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-290"><a href="https://laclassedemallory.net/category/le-20eme-siecle/">Le XXème siècle</a></li>
+	<li id="menu-item-296" class="menu-item menu-item-type-post_type menu-item-object-post menu-item-296"><a href="https://laclassedemallory.net/2020/03/03/lhistoire-racontee-les-aventures-de-lily-et-tony/">Histoire racontée</a></li>
+	<li id="menu-item-263" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-263"><a href="https://laclassedemallory.net/category/geographie/">Géographie</a></li>
+</ul>
+</li>
+<li id="menu-item-27" class="menu-item menu-item-type-taxonomy menu-item-object-category current-menu-item menu-item-has-children menu-item-27"><a href="https://laclassedemallory.net/category/non-classe/" aria-current="page">Langues</a>
+<ul class="sub-menu">
+	<li id="menu-item-274" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-274"><a href="https://laclassedemallory.net/category/anglais/">Anglais</a></li>
+	<li id="menu-item-275" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-275"><a href="https://laclassedemallory.net/category/autres-langues/">Autres langues</a></li>
+</ul>
+</li>
+<li id="menu-item-28" class="menu-item menu-item-type-taxonomy menu-item-object-category current-menu-item menu-item-has-children menu-item-28"><a href="https://laclassedemallory.net/category/non-classe/" aria-current="page">Arts et Musique</a>
+<ul class="sub-menu">
+	<li id="menu-item-276" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-276"><a href="https://laclassedemallory.net/category/art-visuel/">Art visuel</a></li>
+	<li id="menu-item-277" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-277"><a href="https://laclassedemallory.net/category/musique/">Musique</a></li>
+</ul>
+</li>
+<li id="menu-item-29" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-has-children menu-item-29"><a href="https://laclassedemallory.net/category/peda-explicite/">Péda explicite</a>
+<ul class="sub-menu">
+	<li id="menu-item-4781" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-4781"><a href="https://laclassedemallory.net/category/theorie-pex/">Théorie</a></li>
+	<li id="menu-item-4782" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-4782"><a href="https://laclassedemallory.net/category/outils-pex/">Outils</a></li>
+</ul>
+</li>
+<li id="menu-item-26" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-has-children menu-item-26"><a href="https://laclassedemallory.net/category/gestion-de-classe/">Gestion classe &amp; classe Harry Potter</a>
+<ul class="sub-menu">
+	<li id="menu-item-335" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-335"><a href="https://laclassedemallory.net/category/programmations-et-edt/">Programmations et EDT</a></li>
+	<li id="menu-item-336" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-336"><a href="https://laclassedemallory.net/category/classe-harry-potter/">Classe Harry Potter</a></li>
+	<li id="menu-item-337" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-337"><a href="https://laclassedemallory.net/category/outils/">Outils</a></li>
+</ul>
+</li>
+<li id="menu-item-30" class="menu-item menu-item-type-taxonomy menu-item-object-category current-menu-item menu-item-has-children menu-item-30"><a href="https://laclassedemallory.net/category/non-classe/" aria-current="page">Divers</a>
+<ul class="sub-menu">
+	<li id="menu-item-278" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-278"><a href="https://laclassedemallory.net/category/emc/">EMC</a></li>
+	<li id="menu-item-279" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-279"><a href="https://laclassedemallory.net/category/sciences/">Sciences</a></li>
+	<li id="menu-item-280" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-280"><a href="https://laclassedemallory.net/category/eps/">EPS</a></li>
+	<li id="menu-item-3682" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-3682"><a href="https://laclassedemallory.net/category/bons-plans-et-decouvertes/">bons plans et découvertes</a></li>
+</ul>
+</li>
+<li id="menu-item-7173" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-7173"><a href="https://laclassedemallory.net/category/escape-games/">Escape Games</a></li>
+<li id="menu-item-9116" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-9116"><a href="https://laclassedemallory.net/category/applis-pour-la-classe/">Applis pour la classe</a></li>
+<li id="menu-item-10" class="menu-item menu-item-type-post_type menu-item-object-page menu-item-10"><a href="https://laclassedemallory.net/contact/">Contact</a></li>
+<li id="menu-item-10153" class="menu-item menu-item-type-taxonomy menu-item-object-category menu-item-10153"><a href="https://laclassedemallory.net/category/rituel-histoire-et-geo/">rituel histoire et géo</a></li>
+</ul></div>	</nav><!-- #site-navigation -->
+
+	</header><!-- #masthead -->
+
+	<div id="content" class="site-content">
+	<div id="primary" class="content-area">
+		<main id="main" class="site-main" role="main">
+
+		
+			<header class="page-header">
+	<h1 class="page-title">Catégorie : <span>Non classé</span></h1></header><!-- .page-header -->
+
+						
+				
+<article id="post-12430" class="post-12430 post type-post status-publish format-standard hentry category-non-classe">
+	<header class="entry-header">
+		
+					<span class="cat-links"><a href="https://laclassedemallory.net/category/non-classe/" rel="category tag">Non classé</a></span>		
+					<h1 class="entry-title"><a href="https://laclassedemallory.net/2021/07/16/des-jeux-du-commerce-pour-la-classe/" rel="bookmark">Des jeux du commerce pour la&nbsp;classe</a></h1>		
+					<div class="entry-meta">
+				<span class="posted-on"><a href="https://laclassedemallory.net/2021/07/16/des-jeux-du-commerce-pour-la-classe/" rel="bookmark"><time class="entry-date published" datetime="2021-07-16T12:21:00+01:00">16 juillet 2021</time><time class="updated" datetime="2021-07-22T09:45:05+01:00">22 juillet 2021</time></a></span><span class="byline"> <span class="author vcard"><a class="url fn n" href="https://laclassedemallory.net/author/mallotine/">mallotine</a></span></span><span class="comments-link"><a href="https://laclassedemallory.net/2021/07/16/des-jeux-du-commerce-pour-la-classe/#comments">5 commentaires</a></span>			</div>
+			</header><!-- .entry-header -->
+
+			<div class="entry-summary">
+			<p><strong><img data-attachment-id="12446" data-permalink="https://laclassedemallory.net/2021/07/16/des-jeux-du-commerce-pour-la-classe/2fba47f6-8d16-48a5-93f7-33fd2409930a/" data-orig-file="https://laclassedemallory.net/wp-content/uploads/2021/07/2fba47f6-8d16-48a5-93f7-33fd2409930a.jpg" data-orig-size="2048,2048" data-comments-opened="1" data-image-meta="{&quot;aperture&quot;:&quot;0&quot;,&quot;credit&quot;:&quot;&quot;,&quot;camera&quot;:&quot;&quot;,&quot;caption&quot;:&quot;&quot;,&quot;created_timestamp&quot;:&quot;0&quot;,&quot;copyright&quot;:&quot;&quot;,&quot;focal_length&quot;:&quot;0&quot;,&quot;iso&quot;:&quot;0&quot;,&quot;shutter_speed&quot;:&quot;0&quot;,&quot;title&quot;:&quot;&quot;,&quot;orientation&quot;:&quot;1&quot;,&quot;latitude&quot;:&quot;46.652094444444&quot;,&quot;longitude&quot;:&quot;-0.25617222222222&quot;}" data-image-title="2FBA47F6-8D16-48A5-93F7-33FD2409930A" data-image-description="" data-image-caption="" data-medium-file="https://laclassedemallory.net/wp-content/uploads/2021/07/2fba47f6-8d16-48a5-93f7-33fd2409930a.jpg?w=300" data-large-file="https://laclassedemallory.net/wp-content/uploads/2021/07/2fba47f6-8d16-48a5-93f7-33fd2409930a.jpg?w=663" class=" wp-image-12446 alignleft" src="https://laclassedemallory.net/wp-content/uploads/2021/07/2fba47f6-8d16-48a5-93f7-33fd2409930a.jpg?w=497&#038;h=497" alt="2FBA47F6-8D16-48A5-93F7-33FD2409930A" width="497" height="497" srcset="https://laclassedemallory.net/wp-content/uploads/2021/07/2fba47f6-8d16-48a5-93f7-33fd2409930a.jpg?w=497&amp;h=497 497w, https://laclassedemallory.net/wp-content/uploads/2021/07/2fba47f6-8d16-48a5-93f7-33fd2409930a.jpg?w=994&amp;h=994 994w, https://laclassedemallory.net/wp-content/uploads/2021/07/2fba47f6-8d16-48a5-93f7-33fd2409930a.jpg?w=150&amp;h=150 150w, https://laclassedemallory.net/wp-content/uploads/2021/07/2fba47f6-8d16-48a5-93f7-33fd2409930a.jpg?w=300&amp;h=300 300w, https://laclassedemallory.net/wp-content/uploads/2021/07/2fba47f6-8d16-48a5-93f7-33fd2409930a.jpg?w=768&amp;h=768 768w" sizes="(max-width: 497px) 100vw, 497px" />V</strong>ous le savez peut-être si vous me suivez sur le blog, j&rsquo;adore <strong>les jeux de société</strong> !</p>
+<p>Je les <strong>intègre régulièrement à ma pratique de classe</strong> et c&rsquo;est un excellent moyen de rendre les apprentissages plus &laquo;&nbsp;digestes&nbsp;&raquo; auprès des enfants.</p>
+<p><strong>C</strong>ette année, j&rsquo;ai eu la chance de <strong>me voir offrir et de découvrir de nombreux jeux très chouettes</strong> et je vais profiter de cet article pour vous les présenter un peu.</p>
+<p> </p>
+<p> <a href="https://laclassedemallory.net/2021/07/16/des-jeux-du-commerce-pour-la-classe/#more-12430" class="more-link">Poursuivre la lecture de<span class="screen-reader-text"> « Des jeux du commerce pour la&nbsp;classe »</span></a></p>
+			<div id="atatags-1250385141-666a7b0d29968"></div>
+			
+			<script>
+				__ATA.cmd.push(function() {
+					__ATA.initDynamicSlot({
+						id: 'atatags-1250385141-666a7b0d29968',
+						location: 120,
+						formFactor: '001',
+						label: {
+							text: 'Publicités',
+						},
+						creative: {
+							reportAd: {
+								text: 'Report this Ad',
+							},
+							privacySettings: {
+								text: 'Confidentialité',
+								
+							}
+						}
+					});
+				});
+			</script>		</div><!-- .entry-summary -->
+		
+			<div class="entry-flair">
+					</div><!-- .entry-flair -->
+	
+	<footer class="entry-footer">
+			</footer><!-- .entry-footer -->
+</article><!-- #post-## -->
+
+			
+				
+<article id="post-11878" class="post-11878 post type-post status-publish format-standard hentry category-non-classe tag-harry-potter tag-harry-potter-book-night tag-jeu">
+	<header class="entry-header">
+		
+					<span class="cat-links"><a href="https://laclassedemallory.net/category/non-classe/" rel="category tag">Non classé</a></span>		
+					<h1 class="entry-title"><a href="https://laclassedemallory.net/2021/02/02/enquete-sur-le-chemin-de-traverse-le-jeu-de-plateau-special-nuit-des-livres-harry-potter/" rel="bookmark">Enquête sur le chemin de Traverse &#8211; le jeu de plateau spécial Nuit des livres Harry&nbsp;Potter</a></h1>		
+					<div class="entry-meta">
+				<span class="posted-on"><a href="https://laclassedemallory.net/2021/02/02/enquete-sur-le-chemin-de-traverse-le-jeu-de-plateau-special-nuit-des-livres-harry-potter/" rel="bookmark"><time class="entry-date published updated" datetime="2021-02-02T19:03:34+01:00">2 février 2021</time></a></span><span class="byline"> <span class="author vcard"><a class="url fn n" href="https://laclassedemallory.net/author/mallotine/">mallotine</a></span></span><span class="comments-link"><a href="https://laclassedemallory.net/2021/02/02/enquete-sur-le-chemin-de-traverse-le-jeu-de-plateau-special-nuit-des-livres-harry-potter/#comments">8 commentaires</a></span>			</div>
+			</header><!-- .entry-header -->
+
+			<div class="entry-summary">
+			<p><img data-attachment-id="11879" data-permalink="https://laclassedemallory.net/capture-decran-2021-02-02-a-18-28-54/" data-orig-file="https://laclassedemallory.net/wp-content/uploads/2021/02/capture-decc81cran-2021-02-02-acc80-18.28.54.png" data-orig-size="960,716" data-comments-opened="1" data-image-meta="{&quot;aperture&quot;:&quot;0&quot;,&quot;credit&quot;:&quot;&quot;,&quot;camera&quot;:&quot;&quot;,&quot;caption&quot;:&quot;&quot;,&quot;created_timestamp&quot;:&quot;0&quot;,&quot;copyright&quot;:&quot;&quot;,&quot;focal_length&quot;:&quot;0&quot;,&quot;iso&quot;:&quot;0&quot;,&quot;shutter_speed&quot;:&quot;0&quot;,&quot;title&quot;:&quot;&quot;,&quot;orientation&quot;:&quot;0&quot;}" data-image-title="Capture d’écran 2021-02-02 à 18.28.54" data-image-description="" data-image-caption="" data-medium-file="https://laclassedemallory.net/wp-content/uploads/2021/02/capture-decc81cran-2021-02-02-acc80-18.28.54.png?w=300" data-large-file="https://laclassedemallory.net/wp-content/uploads/2021/02/capture-decc81cran-2021-02-02-acc80-18.28.54.png?w=663" class="wp-image-11879 alignleft" src="https://laclassedemallory.net/wp-content/uploads/2021/02/capture-decc81cran-2021-02-02-acc80-18.28.54.png?w=472&#038;h=352" alt="Capture d’écran 2021-02-02 à 18.28.54" width="472" height="352" srcset="https://laclassedemallory.net/wp-content/uploads/2021/02/capture-decc81cran-2021-02-02-acc80-18.28.54.png?w=472&amp;h=352 472w, https://laclassedemallory.net/wp-content/uploads/2021/02/capture-decc81cran-2021-02-02-acc80-18.28.54.png?w=944&amp;h=704 944w, https://laclassedemallory.net/wp-content/uploads/2021/02/capture-decc81cran-2021-02-02-acc80-18.28.54.png?w=150&amp;h=112 150w, https://laclassedemallory.net/wp-content/uploads/2021/02/capture-decc81cran-2021-02-02-acc80-18.28.54.png?w=300&amp;h=224 300w, https://laclassedemallory.net/wp-content/uploads/2021/02/capture-decc81cran-2021-02-02-acc80-18.28.54.png?w=768&amp;h=573 768w" sizes="(max-width: 472px) 100vw, 472px" /><strong>C</strong>ette fois-ci après avoir partagé <a href="https://laclassedemallory.net/2021/01/31/enquete-sur-le-chemin-de-traverse-jeu-de-fin-de-periode-et-ou-pour-la-nuit-des-livres-harry-potter/" target="_blank" rel="noopener"><strong>mon jeu de fin de période en version Genially</strong></a>, je vous partage une version jeu de plateau pour les classes n&rsquo;ayant pas accès à internet ni de matériel informatique.</p>
+<p><strong>C</strong>ette version est augmentée d&rsquo;un <strong>quizz sur le chemin de Traverse.</strong></p>
+<p><strong>C</strong>e jeu fonctionne avec la <strong>mécanique du jeu des mystères de Pékin</strong>. Un vol a été commis à Gringotts et en tant qu&rsquo;Auror, vous devez identifier le coupable parmi une liste de suspects. Pour ce faire, il vous faudra <strong>résoudre 10 énigmes mathématiques</strong>.</p>
+<p> <a href="https://laclassedemallory.net/2021/02/02/enquete-sur-le-chemin-de-traverse-le-jeu-de-plateau-special-nuit-des-livres-harry-potter/#more-11878" class="more-link">Poursuivre la lecture de<span class="screen-reader-text"> « Enquête sur le chemin de Traverse &#8211; le jeu de plateau spécial Nuit des livres Harry&nbsp;Potter »</span></a></p>
+		</div><!-- .entry-summary -->
+		
+			<div class="entry-flair">
+					</div><!-- .entry-flair -->
+	
+	<footer class="entry-footer">
+			</footer><!-- .entry-footer -->
+</article><!-- #post-## -->
+
+			
+				
+<article id="post-9636" class="post-9636 post type-post status-publish format-standard hentry category-escape-game category-escape-games category-non-classe tag-escape-game tag-jeu-fin-de-periode tag-noel">
+	<header class="entry-header">
+		
+					<span class="cat-links"><a href="https://laclassedemallory.net/tag/escape-game/" rel="category tag">escape game</a>&middot;<a href="https://laclassedemallory.net/category/escape-games/" rel="category tag">Escape Games</a>&middot;<a href="https://laclassedemallory.net/category/non-classe/" rel="category tag">Non classé</a></span>		
+					<h1 class="entry-title"><a href="https://laclassedemallory.net/2019/12/13/escape-game-de-noel-version-2/" rel="bookmark">Escape Game de Noël &#8211; version&nbsp;2</a></h1>		
+					<div class="entry-meta">
+				<span class="posted-on"><a href="https://laclassedemallory.net/2019/12/13/escape-game-de-noel-version-2/" rel="bookmark"><time class="entry-date published" datetime="2019-12-13T12:57:41+01:00">13 décembre 2019</time><time class="updated" datetime="2019-12-13T12:59:31+01:00">13 décembre 2019</time></a></span><span class="byline"> <span class="author vcard"><a class="url fn n" href="https://laclassedemallory.net/author/mallotine/">mallotine</a></span></span><span class="comments-link"><a href="https://laclassedemallory.net/2019/12/13/escape-game-de-noel-version-2/#comments">75 commentaires</a></span>			</div>
+			</header><!-- .entry-header -->
+
+			<div class="entry-summary">
+			<p><strong><img data-attachment-id="9641" data-permalink="https://laclassedemallory.net/2019/12/13/escape-game-de-noel-version-2/capture-decran-2019-12-13-a-12-39-21/" data-orig-file="https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-13-acc80-12.39.21.png" data-orig-size="1276,824" data-comments-opened="1" data-image-meta="{&quot;aperture&quot;:&quot;0&quot;,&quot;credit&quot;:&quot;&quot;,&quot;camera&quot;:&quot;&quot;,&quot;caption&quot;:&quot;&quot;,&quot;created_timestamp&quot;:&quot;0&quot;,&quot;copyright&quot;:&quot;&quot;,&quot;focal_length&quot;:&quot;0&quot;,&quot;iso&quot;:&quot;0&quot;,&quot;shutter_speed&quot;:&quot;0&quot;,&quot;title&quot;:&quot;&quot;,&quot;orientation&quot;:&quot;0&quot;}" data-image-title="Capture d’écran 2019-12-13 à 12.39.21" data-image-description="" data-image-caption="" data-medium-file="https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-13-acc80-12.39.21.png?w=300" data-large-file="https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-13-acc80-12.39.21.png?w=663" class="  wp-image-9641 alignleft" src="https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-13-acc80-12.39.21.png?w=421&#038;h=272" alt="Capture d’écran 2019-12-13 à 12.39.21" width="421" height="272" srcset="https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-13-acc80-12.39.21.png?w=421&amp;h=272 421w, https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-13-acc80-12.39.21.png?w=842&amp;h=544 842w, https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-13-acc80-12.39.21.png?w=150&amp;h=97 150w, https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-13-acc80-12.39.21.png?w=300&amp;h=194 300w, https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-13-acc80-12.39.21.png?w=768&amp;h=496 768w" sizes="(max-width: 421px) 100vw, 421px" />C</strong>&lsquo;est désormais un rituel dans ma classe : nous clôturons chaque période par un jeu d&rsquo;évasion. C&rsquo;est l&rsquo;occasion pour les élèves <strong>de réviser ou de coopérer autrement</strong> et c&rsquo;est toujours un événement très attendu.</p>
+<p><strong>A</strong> l&rsquo;occasion de la fin de cette seconde période de classe, j&rsquo;ai <strong>remanié mon escape game de Noël existant</strong> et c&rsquo;est cela que je vous propose dans cet article.</p>
+<p><strong>C</strong>et <strong>escape game est virtuel</strong> (sous Genial.ly) mais les élèves disposeront <strong>d&rsquo;indices physiques</strong> qu&rsquo;ils récupèreront au fur et à mesure et qui les aideront à résoudre les différentes énigmes du jeu.</p>
+<p> <a href="https://laclassedemallory.net/2019/12/13/escape-game-de-noel-version-2/#more-9636" class="more-link">Poursuivre la lecture de<span class="screen-reader-text"> « Escape Game de Noël &#8211; version&nbsp;2 »</span></a></p>
+		</div><!-- .entry-summary -->
+		
+			<div class="entry-flair">
+					</div><!-- .entry-flair -->
+	
+	<footer class="entry-footer">
+			</footer><!-- .entry-footer -->
+</article><!-- #post-## -->
+
+			
+				
+<article id="post-9598" class="post-9598 post type-post status-publish format-standard hentry category-autres-jeux-maths category-escape-game category-non-classe tag-enigmes tag-calendrier-avent tag-cycle-3 tag-jeu tag-maths">
+	<header class="entry-header">
+		
+					<span class="cat-links"><a href="https://laclassedemallory.net/category/autres-jeux-maths/" rel="category tag">autres jeux maths</a>&middot;<a href="https://laclassedemallory.net/tag/escape-game/" rel="category tag">escape game</a>&middot;<a href="https://laclassedemallory.net/category/non-classe/" rel="category tag">Non classé</a></span>		
+					<h1 class="entry-title"><a href="https://laclassedemallory.net/2019/12/01/calendrier-denigmes-pour-attendre-les-vacances/" rel="bookmark">Calendrier d&rsquo;énigmes pour attendre les&nbsp;vacances&#8230;</a></h1>		
+					<div class="entry-meta">
+				<span class="posted-on"><a href="https://laclassedemallory.net/2019/12/01/calendrier-denigmes-pour-attendre-les-vacances/" rel="bookmark"><time class="entry-date published" datetime="2019-12-01T16:37:33+01:00">1 décembre 2019</time><time class="updated" datetime="2019-12-01T16:43:16+01:00">1 décembre 2019</time></a></span><span class="byline"> <span class="author vcard"><a class="url fn n" href="https://laclassedemallory.net/author/mallotine/">mallotine</a></span></span><span class="comments-link"><a href="https://laclassedemallory.net/2019/12/01/calendrier-denigmes-pour-attendre-les-vacances/#comments">73 commentaires</a></span>			</div>
+			</header><!-- .entry-header -->
+
+			<div class="entry-summary">
+			<p><img loading="lazy" data-attachment-id="9601" data-permalink="https://laclassedemallory.net/2019/12/01/calendrier-denigmes-pour-attendre-les-vacances/capture-decran-2019-12-01-a-16-17-54/" data-orig-file="https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-01-acc80-16.17.54.png" data-orig-size="1188,974" data-comments-opened="1" data-image-meta="{&quot;aperture&quot;:&quot;0&quot;,&quot;credit&quot;:&quot;&quot;,&quot;camera&quot;:&quot;&quot;,&quot;caption&quot;:&quot;&quot;,&quot;created_timestamp&quot;:&quot;0&quot;,&quot;copyright&quot;:&quot;&quot;,&quot;focal_length&quot;:&quot;0&quot;,&quot;iso&quot;:&quot;0&quot;,&quot;shutter_speed&quot;:&quot;0&quot;,&quot;title&quot;:&quot;&quot;,&quot;orientation&quot;:&quot;0&quot;}" data-image-title="Capture d’écran 2019-12-01 à 16.17.54" data-image-description="" data-image-caption="" data-medium-file="https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-01-acc80-16.17.54.png?w=300" data-large-file="https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-01-acc80-16.17.54.png?w=663" class="  wp-image-9601 alignleft" src="https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-01-acc80-16.17.54.png?w=378&#038;h=310" alt="Capture d’écran 2019-12-01 à 16.17.54" width="378" height="310" srcset="https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-01-acc80-16.17.54.png?w=378&amp;h=310 378w, https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-01-acc80-16.17.54.png?w=756&amp;h=620 756w, https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-01-acc80-16.17.54.png?w=150&amp;h=123 150w, https://laclassedemallory.net/wp-content/uploads/2019/12/capture-de28099ecc81cran-2019-12-01-acc80-16.17.54.png?w=300&amp;h=246 300w" sizes="(max-width: 378px) 100vw, 378px" /><strong>C</strong>omme chaque année, je partage avec vous le petit rituel de décembre : <strong>le calendrier pour attendre les vacances</strong>.</p>
+<p><strong>L</strong>a version de cette année est composée de <strong>24 énigmes mathématiques</strong> permettant de faire travailler la logique et le calcul. Il peut être <strong>utilisé en classe,</strong> à raison de deux énigmes par jour (ce que je vais faire) <strong>ou à la maison en famille</strong>.</p>
+<p><strong>C</strong>haque énigme résolue permettra d&rsquo;obtenir un <strong>mot secret</strong> qu&rsquo;il faudra retrouver dans une <strong>grille de mots mêlés</strong>. Les lettres restantes de la grille donneront un mot-clé final qui donnera lieu à une récompense le dernier jour de classe. <a href="https://laclassedemallory.net/2019/12/01/calendrier-denigmes-pour-attendre-les-vacances/#more-9598" class="more-link">Poursuivre la lecture de<span class="screen-reader-text"> « Calendrier d&rsquo;énigmes pour attendre les&nbsp;vacances&#8230; »</span></a></p>
+		</div><!-- .entry-summary -->
+		
+			<div class="entry-flair">
+					</div><!-- .entry-flair -->
+	
+	<footer class="entry-footer">
+			</footer><!-- .entry-footer -->
+</article><!-- #post-## -->
+
+			
+				
+<article id="post-9456" class="post-9456 post type-post status-publish format-standard hentry category-classe-harry-potter category-escape-game category-escape-games category-non-classe tag-escapegame tag-francais tag-geographie tag-halloween tag-histoire tag-jeu tag-maths tag-revisions tag-sciences">
+	<header class="entry-header">
+		
+					<span class="cat-links"><a href="https://laclassedemallory.net/tag/classe-harry-potter/" rel="category tag">classe Harry Potter</a>&middot;<a href="https://laclassedemallory.net/tag/escape-game/" rel="category tag">escape game</a>&middot;<a href="https://laclassedemallory.net/category/escape-games/" rel="category tag">Escape Games</a>&middot;<a href="https://laclassedemallory.net/category/non-classe/" rel="category tag">Non classé</a></span>		
+					<h1 class="entry-title"><a href="https://laclassedemallory.net/2019/10/06/escape-game-fin-de-periode-1-le-grimoire-magique-dhalloween/" rel="bookmark">Escape Game fin de période 1 &#8211; Le grimoire magique d&rsquo;Halloween</a></h1>		
+					<div class="entry-meta">
+				<span class="posted-on"><a href="https://laclassedemallory.net/2019/10/06/escape-game-fin-de-periode-1-le-grimoire-magique-dhalloween/" rel="bookmark"><time class="entry-date published" datetime="2019-10-06T19:38:05+01:00">6 octobre 2019</time><time class="updated" datetime="2019-10-06T20:40:25+01:00">6 octobre 2019</time></a></span><span class="byline"> <span class="author vcard"><a class="url fn n" href="https://laclassedemallory.net/author/mallotine/">mallotine</a></span></span><span class="comments-link"><a href="https://laclassedemallory.net/2019/10/06/escape-game-fin-de-periode-1-le-grimoire-magique-dhalloween/#comments">16 commentaires</a></span>			</div>
+			</header><!-- .entry-header -->
+
+			<div class="entry-summary">
+			<p><strong><img loading="lazy" data-attachment-id="9474" data-permalink="https://laclassedemallory.net/2019/10/06/escape-game-fin-de-periode-1-le-grimoire-magique-dhalloween/capture-decran-2019-10-06-a-20-51-12/" data-orig-file="https://laclassedemallory.net/wp-content/uploads/2019/10/capture-de28099ecc81cran-2019-10-06-acc80-20.51.12.png" data-orig-size="918,916" data-comments-opened="1" data-image-meta="{&quot;aperture&quot;:&quot;0&quot;,&quot;credit&quot;:&quot;&quot;,&quot;camera&quot;:&quot;&quot;,&quot;caption&quot;:&quot;&quot;,&quot;created_timestamp&quot;:&quot;0&quot;,&quot;copyright&quot;:&quot;&quot;,&quot;focal_length&quot;:&quot;0&quot;,&quot;iso&quot;:&quot;0&quot;,&quot;shutter_speed&quot;:&quot;0&quot;,&quot;title&quot;:&quot;&quot;,&quot;orientation&quot;:&quot;0&quot;}" data-image-title="Capture d’écran 2019-10-06 à 20.51.12" data-image-description="" data-image-caption="" data-medium-file="https://laclassedemallory.net/wp-content/uploads/2019/10/capture-de28099ecc81cran-2019-10-06-acc80-20.51.12.png?w=300" data-large-file="https://laclassedemallory.net/wp-content/uploads/2019/10/capture-de28099ecc81cran-2019-10-06-acc80-20.51.12.png?w=663" class="  wp-image-9474 alignleft" src="https://laclassedemallory.net/wp-content/uploads/2019/10/capture-de28099ecc81cran-2019-10-06-acc80-20.51.12.png?w=326&#038;h=325" alt="Capture d’écran 2019-10-06 à 20.51.12" width="326" height="325" srcset="https://laclassedemallory.net/wp-content/uploads/2019/10/capture-de28099ecc81cran-2019-10-06-acc80-20.51.12.png?w=326&amp;h=325 326w, https://laclassedemallory.net/wp-content/uploads/2019/10/capture-de28099ecc81cran-2019-10-06-acc80-20.51.12.png?w=652&amp;h=650 652w, https://laclassedemallory.net/wp-content/uploads/2019/10/capture-de28099ecc81cran-2019-10-06-acc80-20.51.12.png?w=150&amp;h=150 150w, https://laclassedemallory.net/wp-content/uploads/2019/10/capture-de28099ecc81cran-2019-10-06-acc80-20.51.12.png?w=300&amp;h=300 300w" sizes="(max-width: 326px) 100vw, 326px" />J</strong>e partage avec vous ici, <strong>l&rsquo;escape game</strong> que les élèves réaliseront le dernier vendredi de cette période. Ce jeu permettra de <strong>revoir les principales notions étudiées sur ce début d&rsquo;année en français, mathématiques, anglais, histoire, géographie&#8230;</strong></p>
+<p><strong>L</strong>e scénario sera le suivant : Je projetterai au tableau une vidéo dans laquelle Ermeline, <strong>un fantôme</strong> qui hante notre école nous demandera de <strong>l&rsquo;aide afin de gagner l&rsquo;au-delà le jour de Halloween</strong>. Elle expliquera aux élèves qu&rsquo;ils devront trouver des indices afin d&rsquo;ouvrir le coffre dans lequel se trouve la formule magique libératrice. <a href="https://laclassedemallory.net/2019/10/06/escape-game-fin-de-periode-1-le-grimoire-magique-dhalloween/#more-9456" class="more-link">Poursuivre la lecture de<span class="screen-reader-text"> « Escape Game fin de période 1 &#8211; Le grimoire magique d&rsquo;Halloween »</span></a></p>
+		</div><!-- .entry-summary -->
+		
+			<div class="entry-flair">
+					</div><!-- .entry-flair -->
+	
+	<footer class="entry-footer">
+			</footer><!-- .entry-footer -->
+</article><!-- #post-## -->
+
+			
+				
+<article id="post-9434" class="post-9434 post type-post status-publish format-standard hentry category-classe-harry-potter category-dictees category-non-classe tag-adaptation-dys tag-dictee tag-dictee-flash tag-dictee-silhouette tag-harry-potter">
+	<header class="entry-header">
+		
+					<span class="cat-links"><a href="https://laclassedemallory.net/tag/classe-harry-potter/" rel="category tag">classe Harry Potter</a>&middot;<a href="https://laclassedemallory.net/category/dictees/" rel="category tag">Dictées</a>&middot;<a href="https://laclassedemallory.net/category/non-classe/" rel="category tag">Non classé</a></span>		
+					<h1 class="entry-title"><a href="https://laclassedemallory.net/2019/10/02/dictees-flashs-harry-potter-et-dictees-silhouette/" rel="bookmark">Dictées flashs Harry Potter et dictées &laquo;&nbsp;silhouette&nbsp;&raquo;</a></h1>		
+					<div class="entry-meta">
+				<span class="posted-on"><a href="https://laclassedemallory.net/2019/10/02/dictees-flashs-harry-potter-et-dictees-silhouette/" rel="bookmark"><time class="entry-date published" datetime="2019-10-02T18:49:09+01:00">2 octobre 2019</time><time class="updated" datetime="2021-07-18T09:42:55+01:00">18 juillet 2021</time></a></span><span class="byline"> <span class="author vcard"><a class="url fn n" href="https://laclassedemallory.net/author/mallotine/">mallotine</a></span></span><span class="comments-link"><a href="https://laclassedemallory.net/2019/10/02/dictees-flashs-harry-potter-et-dictees-silhouette/#comments">90 commentaires</a></span>			</div>
+			</header><!-- .entry-header -->
+
+			<div class="entry-summary">
+			<p><img loading="lazy" data-attachment-id="9444" data-permalink="https://laclassedemallory.net/2019/10/02/dictees-flashs-harry-potter-et-dictees-silhouette/capture-decran-2019-10-02-a-19-37-03/" data-orig-file="https://laclassedemallory.net/wp-content/uploads/2019/10/capture-de28099ecc81cran-2019-10-02-acc80-19.37.03.png" data-orig-size="976,914" data-comments-opened="1" data-image-meta="{&quot;aperture&quot;:&quot;0&quot;,&quot;credit&quot;:&quot;&quot;,&quot;camera&quot;:&quot;&quot;,&quot;caption&quot;:&quot;&quot;,&quot;created_timestamp&quot;:&quot;0&quot;,&quot;copyright&quot;:&quot;&quot;,&quot;focal_length&quot;:&quot;0&quot;,&quot;iso&quot;:&quot;0&quot;,&quot;shutter_speed&quot;:&quot;0&quot;,&quot;title&quot;:&quot;&quot;,&quot;orientation&quot;:&quot;0&quot;}" data-image-title="Capture d’écran 2019-10-02 à 19.37.03" data-image-description="" data-image-caption="" data-medium-file="https://laclassedemallory.net/wp-content/uploads/2019/10/capture-de28099ecc81cran-2019-10-02-acc80-19.37.03.png?w=300" data-large-file="https://laclassedemallory.net/wp-content/uploads/2019/10/capture-de28099ecc81cran-2019-10-02-acc80-19.37.03.png?w=663" class="  wp-image-9444 alignleft" src="https://laclassedemallory.net/wp-content/uploads/2019/10/capture-de28099ecc81cran-2019-10-02-acc80-19.37.03.png?w=385&#038;h=361" alt="Capture d’écran 2019-10-02 à 19.37.03" width="385" height="361" srcset="https://laclassedemallory.net/wp-content/uploads/2019/10/capture-de28099ecc81cran-2019-10-02-acc80-19.37.03.png?w=385&amp;h=361 385w, https://laclassedemallory.net/wp-content/uploads/2019/10/capture-de28099ecc81cran-2019-10-02-acc80-19.37.03.png?w=770&amp;h=722 770w, https://laclassedemallory.net/wp-content/uploads/2019/10/capture-de28099ecc81cran-2019-10-02-acc80-19.37.03.png?w=150&amp;h=140 150w, https://laclassedemallory.net/wp-content/uploads/2019/10/capture-de28099ecc81cran-2019-10-02-acc80-19.37.03.png?w=300&amp;h=281 300w" sizes="(max-width: 385px) 100vw, 385px" /><strong>MAJ du 26/08: ajout du fichier exercice de préparation des dictées. (contribution de Bérénice <a href="https://mescrayonsplumes.wordpress.com/2020/08/27/dictee-sur-le-theme-harry-potter/" target="_blank" rel="noopener">Mes crayons plumes</a>)</strong></p>
+<p><strong>V</strong>ous le savez certainement, cela fait plusieurs années que je fonctionne autour d&rsquo;un <strong><a href="https://laclassedemallory.net/category/classe-harry-potter/" target="_blank" rel="noopener">thème de classe Harry Potter</a></strong>. Les élèves accrochent bien et je ne m&rsquo;en lasse pas, étant moi même une grande fan de la série de JK Rowling.</p>
+<p><strong>J</strong>e fonctionne également depuis bientôt une dizaine d&rsquo;années avec le principe des <a href="https://laclassedemallory.net/2017/03/12/dictees-flash-serie-2/" target="_blank" rel="noopener"><strong>dictées flashs</strong></a>. Ce principe, je vous le rappelle, consiste à faire durant <strong>trois jours des dictées d&rsquo;entraînement</strong> assez courtes ( généralement 2 ou 3 phrases) qui sont <strong>corrigées et expliquées en classe</strong> ( on rappelle les règles d&rsquo;orthographe, de grammaire et de conjugaison mises en oeuvre) et de <strong>terminer la semaine par une dictée plus longue, la dictée dite &laquo;&nbsp;bilan&nbsp;&raquo; qui va reprendre les syntaxes et le vocabulaire des dictées d&rsquo;entraînement</strong>. Cette méthode me convient bien et les progrès des élèves sont visibles. <a href="https://laclassedemallory.net/2019/10/02/dictees-flashs-harry-potter-et-dictees-silhouette/#more-9434" class="more-link">Poursuivre la lecture de<span class="screen-reader-text"> « Dictées flashs Harry Potter et dictées &laquo;&nbsp;silhouette&nbsp;&raquo; »</span></a></p>
+		</div><!-- .entry-summary -->
+		
+			<div class="entry-flair">
+					</div><!-- .entry-flair -->
+	
+	<footer class="entry-footer">
+			</footer><!-- .entry-footer -->
+</article><!-- #post-## -->
+
+			
+				
+<article id="post-7643" class="post-7643 post type-post status-publish format-standard hentry category-classe-harry-potter category-escape-game category-escape-games category-non-classe tag-azkaban tag-escape-game tag-harry-potter tag-jeu">
+	<header class="entry-header">
+		
+					<span class="cat-links"><a href="https://laclassedemallory.net/tag/classe-harry-potter/" rel="category tag">classe Harry Potter</a>&middot;<a href="https://laclassedemallory.net/tag/escape-game/" rel="category tag">escape game</a>&middot;<a href="https://laclassedemallory.net/category/escape-games/" rel="category tag">Escape Games</a>&middot;<a href="https://laclassedemallory.net/category/non-classe/" rel="category tag">Non classé</a></span>		
+					<h1 class="entry-title"><a href="https://laclassedemallory.net/2018/06/20/escape-azkaban-escape-game-de-fin-dannee-harry-potter/" rel="bookmark">Escape Azkaban &#8211; escape game de fin d&rsquo;année Harry&nbsp;Potter</a></h1>		
+					<div class="entry-meta">
+				<span class="posted-on"><a href="https://laclassedemallory.net/2018/06/20/escape-azkaban-escape-game-de-fin-dannee-harry-potter/" rel="bookmark"><time class="entry-date published" datetime="2018-06-20T16:10:04+01:00">20 juin 2018</time><time class="updated" datetime="2018-06-20T19:17:04+01:00">20 juin 2018</time></a></span><span class="byline"> <span class="author vcard"><a class="url fn n" href="https://laclassedemallory.net/author/mallotine/">mallotine</a></span></span><span class="comments-link"><a href="https://laclassedemallory.net/2018/06/20/escape-azkaban-escape-game-de-fin-dannee-harry-potter/#comments">79 commentaires</a></span>			</div>
+			</header><!-- .entry-header -->
+
+			<div class="entry-summary">
+			<p><strong><a href="https://laclassedemallory.net/wp-content/uploads/2018/06/escape-azkaban-solution.pdf" target="_blank" rel="noopener"><img loading="lazy" data-attachment-id="7650" data-permalink="https://laclassedemallory.net/2018/06/20/escape-azkaban-escape-game-de-fin-dannee-harry-potter/escape-azkaban-2/" data-orig-file="https://laclassedemallory.net/wp-content/uploads/2018/06/escape-azkaban1.png" data-orig-size="738,598" data-comments-opened="1" data-image-meta="{&quot;aperture&quot;:&quot;0&quot;,&quot;credit&quot;:&quot;&quot;,&quot;camera&quot;:&quot;&quot;,&quot;caption&quot;:&quot;&quot;,&quot;created_timestamp&quot;:&quot;0&quot;,&quot;copyright&quot;:&quot;&quot;,&quot;focal_length&quot;:&quot;0&quot;,&quot;iso&quot;:&quot;0&quot;,&quot;shutter_speed&quot;:&quot;0&quot;,&quot;title&quot;:&quot;&quot;,&quot;orientation&quot;:&quot;0&quot;}" data-image-title="escape azkaban" data-image-description="" data-image-caption="" data-medium-file="https://laclassedemallory.net/wp-content/uploads/2018/06/escape-azkaban1.png?w=300" data-large-file="https://laclassedemallory.net/wp-content/uploads/2018/06/escape-azkaban1.png?w=663" class="  wp-image-7650 alignleft" src="https://laclassedemallory.net/wp-content/uploads/2018/06/escape-azkaban1.png?w=443&#038;h=359" alt="escape azkaban" width="443" height="359" srcset="https://laclassedemallory.net/wp-content/uploads/2018/06/escape-azkaban1.png?w=443&amp;h=359 443w, https://laclassedemallory.net/wp-content/uploads/2018/06/escape-azkaban1.png?w=150&amp;h=122 150w, https://laclassedemallory.net/wp-content/uploads/2018/06/escape-azkaban1.png?w=300&amp;h=243 300w, https://laclassedemallory.net/wp-content/uploads/2018/06/escape-azkaban1.png 738w" sizes="(max-width: 443px) 100vw, 443px" /></a>J</strong>e partage avec vous ici un <strong>nouvel escape game</strong> que je vais proposer à mes élèves pour la fin de l&rsquo;année. Celui-ci sera sur le <strong>thème d&rsquo;Harry Potter</strong> puisque l&rsquo;univers du petit sorcier à lunettes est mon thème de classe et il aura la particularité d&rsquo;être mon premier escape game mixte c&rsquo;est à dire comprenant <strong>des fouilles virtuelles</strong> (sur PC ou tablette) mais également <strong>des fouilles réelles</strong> (dans la classe).</p>
+<p><strong>I</strong>l s&rsquo;agira de résoudre différentes énigmes visant à <strong>s&rsquo;évader de la tristement célèbre prison pour sorciers d&rsquo;Azkaban </strong>dans laquelle on se retrouve enfermé par erreur. Les énigmes sont variées : code à décrypter, petits problèmes de logique, stéréogrammes, quizzs&#8230;</p>
+<p> <a href="https://laclassedemallory.net/2018/06/20/escape-azkaban-escape-game-de-fin-dannee-harry-potter/#more-7643" class="more-link">Poursuivre la lecture de<span class="screen-reader-text"> « Escape Azkaban &#8211; escape game de fin d&rsquo;année Harry&nbsp;Potter »</span></a></p>
+		</div><!-- .entry-summary -->
+		
+			<div class="entry-flair">
+					</div><!-- .entry-flair -->
+	
+	<footer class="entry-footer">
+			</footer><!-- .entry-footer -->
+</article><!-- #post-## -->
+
+			
+				
+<article id="post-7175" class="post-7175 post type-post status-publish format-standard hentry category-autres-jeux-maths category-escape-games category-non-classe tag-enigme tag-cadenas tag-escape-game tag-jeu tag-maths tag-noel">
+	<header class="entry-header">
+		
+					<span class="cat-links"><a href="https://laclassedemallory.net/category/autres-jeux-maths/" rel="category tag">autres jeux maths</a>&middot;<a href="https://laclassedemallory.net/category/escape-games/" rel="category tag">Escape Games</a>&middot;<a href="https://laclassedemallory.net/category/non-classe/" rel="category tag">Non classé</a></span>		
+					<h1 class="entry-title"><a href="https://laclassedemallory.net/2017/12/09/escape-game-de-noel-il-faut-retrouver-le-pere-noel/" rel="bookmark">Escape Game de Noël &#8211; Il faut retrouver le Père-Noël&#8230;</a></h1>		
+					<div class="entry-meta">
+				<span class="posted-on"><a href="https://laclassedemallory.net/2017/12/09/escape-game-de-noel-il-faut-retrouver-le-pere-noel/" rel="bookmark"><time class="entry-date published" datetime="2017-12-09T10:07:02+01:00">9 décembre 2017</time><time class="updated" datetime="2017-12-09T18:33:51+01:00">9 décembre 2017</time></a></span><span class="byline"> <span class="author vcard"><a class="url fn n" href="https://laclassedemallory.net/author/mallotine/">mallotine</a></span></span><span class="comments-link"><a href="https://laclassedemallory.net/2017/12/09/escape-game-de-noel-il-faut-retrouver-le-pere-noel/#comments">117 commentaires</a></span>			</div>
+			</header><!-- .entry-header -->
+
+			<div class="entry-summary">
+			<p><a href="https://www.genial.ly/View/Index/5a27faddf28f4d0ae43daa5a" target="_blank" rel="noopener"><img loading="lazy" data-attachment-id="7176" data-permalink="https://laclassedemallory.net/2017/12/09/escape-game-de-noel-il-faut-retrouver-le-pere-noel/escape-game-noel/" data-orig-file="https://laclassedemallory.net/wp-content/uploads/2017/12/escape-game-noel.jpeg" data-orig-size="657,369" data-comments-opened="1" data-image-meta="{&quot;aperture&quot;:&quot;0&quot;,&quot;credit&quot;:&quot;&quot;,&quot;camera&quot;:&quot;&quot;,&quot;caption&quot;:&quot;&quot;,&quot;created_timestamp&quot;:&quot;0&quot;,&quot;copyright&quot;:&quot;&quot;,&quot;focal_length&quot;:&quot;0&quot;,&quot;iso&quot;:&quot;0&quot;,&quot;shutter_speed&quot;:&quot;0&quot;,&quot;title&quot;:&quot;&quot;,&quot;orientation&quot;:&quot;0&quot;}" data-image-title="escape game noel" data-image-description="" data-image-caption="" data-medium-file="https://laclassedemallory.net/wp-content/uploads/2017/12/escape-game-noel.jpeg?w=300" data-large-file="https://laclassedemallory.net/wp-content/uploads/2017/12/escape-game-noel.jpeg?w=657" class="  wp-image-7176 alignleft" src="https://laclassedemallory.net/wp-content/uploads/2017/12/escape-game-noel.jpeg?w=461&#038;h=259" alt="escape game noel" width="461" height="259" srcset="https://laclassedemallory.net/wp-content/uploads/2017/12/escape-game-noel.jpeg?w=461&amp;h=259 461w, https://laclassedemallory.net/wp-content/uploads/2017/12/escape-game-noel.jpeg?w=150&amp;h=84 150w, https://laclassedemallory.net/wp-content/uploads/2017/12/escape-game-noel.jpeg?w=300&amp;h=168 300w, https://laclassedemallory.net/wp-content/uploads/2017/12/escape-game-noel.jpeg 657w" sizes="(max-width: 461px) 100vw, 461px" /></a><strong>J</strong>e partage avec vous dans cet article, le dernier né de mes <strong>escape games : un escape game de Noël.</strong></p>
+<p><strong>I</strong>l s&rsquo;agira pour les élèves de <strong>retrouver le Père-Noël qui a disparu afin de sauver les vacances</strong> de Noël de tous les enfants. Car comme chacun le sait: sans Père-Noël, pas de vacances de Noël !</p>
+<p><strong>L</strong>e jeu consistera en une <strong>fouille virtuelle de la maison</strong> du Père-Noël, <strong>agrémentée de défis mathématiques et de devinettes</strong> qui donneront des indices pour ouvrir les différentes pièces de la maison du vieux bonhomme rouge.</p>
+<p> <a href="https://laclassedemallory.net/2017/12/09/escape-game-de-noel-il-faut-retrouver-le-pere-noel/#more-7175" class="more-link">Poursuivre la lecture de<span class="screen-reader-text"> « Escape Game de Noël &#8211; Il faut retrouver le Père-Noël&#8230; »</span></a></p>
+		</div><!-- .entry-summary -->
+		
+			<div class="entry-flair">
+					</div><!-- .entry-flair -->
+	
+	<footer class="entry-footer">
+			</footer><!-- .entry-footer -->
+</article><!-- #post-## -->
+
+			
+				
+<article id="post-7059" class="post-7059 post type-post status-publish format-standard hentry category-non-classe category-rituels-m category-rituels-mathematiques tag-defi tag-rituel-maths">
+	<header class="entry-header">
+		
+					<span class="cat-links"><a href="https://laclassedemallory.net/category/non-classe/" rel="category tag">Non classé</a>&middot;<a href="https://laclassedemallory.net/category/rituels-m/" rel="category tag">Rituels M</a>&middot;<a href="https://laclassedemallory.net/category/rituels-mathematiques/" rel="category tag">Rituels mathématiques</a></span>		
+					<h1 class="entry-title"><a href="https://laclassedemallory.net/2017/10/02/defi-maths-express/" rel="bookmark">Défi maths express&#8230;</a></h1>		
+					<div class="entry-meta">
+				<span class="posted-on"><a href="https://laclassedemallory.net/2017/10/02/defi-maths-express/" rel="bookmark"><time class="entry-date published" datetime="2017-10-02T12:04:02+01:00">2 octobre 2017</time><time class="updated" datetime="2017-11-16T13:06:02+01:00">16 novembre 2017</time></a></span><span class="byline"> <span class="author vcard"><a class="url fn n" href="https://laclassedemallory.net/author/mallotine/">mallotine</a></span></span><span class="comments-link"><a href="https://laclassedemallory.net/2017/10/02/defi-maths-express/#comments">27 commentaires</a></span>			</div>
+			</header><!-- .entry-header -->
+
+			<div class="entry-summary">
+			<p><img loading="lazy" data-attachment-id="7060" data-permalink="https://laclassedemallory.net/2017/10/02/defi-maths-express/defi-maths/" data-orig-file="https://laclassedemallory.net/wp-content/uploads/2017/11/decc81fi-maths.jpeg" data-orig-size="623,621" data-comments-opened="1" data-image-meta="{&quot;aperture&quot;:&quot;0&quot;,&quot;credit&quot;:&quot;&quot;,&quot;camera&quot;:&quot;&quot;,&quot;caption&quot;:&quot;&quot;,&quot;created_timestamp&quot;:&quot;0&quot;,&quot;copyright&quot;:&quot;&quot;,&quot;focal_length&quot;:&quot;0&quot;,&quot;iso&quot;:&quot;0&quot;,&quot;shutter_speed&quot;:&quot;0&quot;,&quot;title&quot;:&quot;&quot;,&quot;orientation&quot;:&quot;0&quot;}" data-image-title="défi maths" data-image-description="" data-image-caption="" data-medium-file="https://laclassedemallory.net/wp-content/uploads/2017/11/decc81fi-maths.jpeg?w=300" data-large-file="https://laclassedemallory.net/wp-content/uploads/2017/11/decc81fi-maths.jpeg?w=623" class="  wp-image-7060 alignleft" src="https://laclassedemallory.net/wp-content/uploads/2017/11/decc81fi-maths.jpeg?w=382&#038;h=381" alt="défi maths" width="382" height="381" srcset="https://laclassedemallory.net/wp-content/uploads/2017/11/decc81fi-maths.jpeg?w=382&amp;h=381 382w, https://laclassedemallory.net/wp-content/uploads/2017/11/decc81fi-maths.jpeg?w=150&amp;h=150 150w, https://laclassedemallory.net/wp-content/uploads/2017/11/decc81fi-maths.jpeg?w=300&amp;h=300 300w, https://laclassedemallory.net/wp-content/uploads/2017/11/decc81fi-maths.jpeg 623w" sizes="(max-width: 382px) 100vw, 382px" /><strong>J</strong>e remets en téléchargement ici un ancien document présent sur l&rsquo;ancien blog et qu&rsquo;on m&rsquo;a demandé récemment : les <strong>défis maths express</strong>.</p>
+<p><strong>I</strong>l s&rsquo;agit de petites <strong>activités mathématiques et logiques</strong> qui peuvent faire l&rsquo;objet d&rsquo;un rituel.</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p> <a href="https://laclassedemallory.net/2017/10/02/defi-maths-express/#more-7059" class="more-link">Poursuivre la lecture de<span class="screen-reader-text"> « Défi maths express&#8230; »</span></a></p>
+		</div><!-- .entry-summary -->
+		
+			<div class="entry-flair">
+					</div><!-- .entry-flair -->
+	
+	<footer class="entry-footer">
+			</footer><!-- .entry-footer -->
+</article><!-- #post-## -->
+
+			
+				
+<article id="post-3335" class="post-3335 post type-post status-publish format-standard hentry category-art-visuel category-non-classe tag-cinema tag-fiches tag-metier tag-mouvement-de-camera tag-plan">
+	<header class="entry-header">
+		
+					<span class="cat-links"><a href="https://laclassedemallory.net/tag/art-visuel/" rel="category tag">art visuel</a>&middot;<a href="https://laclassedemallory.net/category/non-classe/" rel="category tag">Non classé</a></span>		
+					<h1 class="entry-title"><a href="https://laclassedemallory.net/2017/05/01/cinema-fiches-connaissances/" rel="bookmark">Cinéma &#8211; Fiches&nbsp;connaissances</a></h1>		
+					<div class="entry-meta">
+				<span class="posted-on"><a href="https://laclassedemallory.net/2017/05/01/cinema-fiches-connaissances/" rel="bookmark"><time class="entry-date published" datetime="2017-05-01T13:16:31+01:00">1 Mai 2017</time><time class="updated" datetime="2019-09-13T16:56:38+01:00">13 septembre 2019</time></a></span><span class="byline"> <span class="author vcard"><a class="url fn n" href="https://laclassedemallory.net/author/mallotine/">mallotine</a></span></span><span class="comments-link"><a href="https://laclassedemallory.net/2017/05/01/cinema-fiches-connaissances/#comments">15 commentaires</a></span>			</div>
+			</header><!-- .entry-header -->
+
+			<div class="entry-summary">
+			<div class="article_text">
+<p style="text-align:center;"><b><img loading="lazy" data-attachment-id="3341" data-permalink="https://laclassedemallory.net/2017/05/01/cinema-fiches-connaissances/ghjkjor97eeopnvw7zl4ti8eiio/" data-orig-file="https://laclassedemallory.net/wp-content/uploads/2017/05/ghjkjor97eeopnvw7zl4ti8eiio.jpg" data-orig-size="502,474" data-comments-opened="1" data-image-meta="{&quot;aperture&quot;:&quot;0&quot;,&quot;credit&quot;:&quot;Mallo et Thomas&quot;,&quot;camera&quot;:&quot;&quot;,&quot;caption&quot;:&quot;&quot;,&quot;created_timestamp&quot;:&quot;1385207810&quot;,&quot;copyright&quot;:&quot;&quot;,&quot;focal_length&quot;:&quot;0&quot;,&quot;iso&quot;:&quot;0&quot;,&quot;shutter_speed&quot;:&quot;0&quot;,&quot;title&quot;:&quot;&quot;,&quot;orientation&quot;:&quot;0&quot;}" data-image-title="ghJkJor97EeOpnvw7ZL4tI8EIIo" data-image-description="" data-image-caption="" data-medium-file="https://laclassedemallory.net/wp-content/uploads/2017/05/ghjkjor97eeopnvw7zl4ti8eiio.jpg?w=300" data-large-file="https://laclassedemallory.net/wp-content/uploads/2017/05/ghjkjor97eeopnvw7zl4ti8eiio.jpg?w=502" class="  wp-image-3341 alignleft" src="https://laclassedemallory.net/wp-content/uploads/2017/05/ghjkjor97eeopnvw7zl4ti8eiio.jpg?w=366&#038;h=346" alt="ghJkJor97EeOpnvw7ZL4tI8EIIo" width="366" height="346" srcset="https://laclassedemallory.net/wp-content/uploads/2017/05/ghjkjor97eeopnvw7zl4ti8eiio.jpg?w=366&amp;h=346 366w, https://laclassedemallory.net/wp-content/uploads/2017/05/ghjkjor97eeopnvw7zl4ti8eiio.jpg?w=150&amp;h=142 150w, https://laclassedemallory.net/wp-content/uploads/2017/05/ghjkjor97eeopnvw7zl4ti8eiio.jpg?w=300&amp;h=283 300w, https://laclassedemallory.net/wp-content/uploads/2017/05/ghjkjor97eeopnvw7zl4ti8eiio.jpg 502w" sizes="(max-width: 366px) 100vw, 366px" />D</b>ans le cadre du projet <strong>Petit cinéma de classe </strong>proposée dans mon département de l&rsquo;Isère, j&rsquo;ai réalisé des fiches abordant la connaissance du cinéma<strong>. </strong>Je les partage ici avec vous. J&rsquo;avais déjà mis en ligne des fiches retraçant l&rsquo;histoire du cinéma et du film d&rsquo;animation à travers les jeux pré-optiques (<a href="https://laclassedemallory.net/2017/05/01/cinema-fiches-histoire-du-cinema-et-de-lanimation/" target="_blank" rel="noopener noreferrer">ici</a>).</p>
+<p style="text-align:center;"> <a href="https://laclassedemallory.net/2017/05/01/cinema-fiches-connaissances/#more-3335" class="more-link">Poursuivre la lecture de<span class="screen-reader-text"> « Cinéma &#8211; Fiches&nbsp;connaissances »</span></a></p>
+</div>
+		</div><!-- .entry-summary -->
+		
+			<div class="entry-flair">
+					</div><!-- .entry-flair -->
+	
+	<footer class="entry-footer">
+			</footer><!-- .entry-footer -->
+</article><!-- #post-## -->
+
+			
+			
+	<nav class="navigation posts-navigation" aria-label="Articles">
+		<h2 class="screen-reader-text">Navigation des articles</h2>
+		<div class="nav-links"><div class="nav-previous"><a href="https://laclassedemallory.net/category/non-classe/page/2/" >Articles Pr&eacute;c&eacute;dents</a></div></div>
+	</nav>
+		
+		</main><!-- #main -->
+	</div><!-- #primary -->
+
+
+
+<div id="secondary" class="widget-area" role="complementary">
+
+				
+				<div id="atatags-1250385143-666a7b0d3e8b7"></div>
+			
+			<script>
+				__ATA.cmd.push(function() {
+					__ATA.initDynamicSlot({
+						id: 'atatags-1250385143-666a7b0d3e8b7',
+						location: 140,
+						formFactor: '003',
+						label: {
+							text: 'Publicités',
+						},
+						creative: {
+							reportAd: {
+								text: 'Report this Ad',
+							},
+							privacySettings: {
+								text: 'Confidentialité',
+								
+							}
+						}
+					});
+				});
+			</script><aside id="text-7" class="widget widget_text"><h1 class="widget-title">A propos&#8230;</h1>			<div class="textwidget">Je suis Mallory. J'enseigne en France, dans l'Isère depuis 15 ans.
+
+</div>
+		</aside><aside id="jetpack_widget_social_icons-3" class="widget jetpack_widget_social_icons"><h1 class="widget-title">Suivez-moi !</h1>
+			<ul class="jetpack-social-widget-list size-large">
+
+				
+											<li class="jetpack-social-widget-item">
+							<a href="http://www.youtube.com/c/LaclassedeMallory1" target="_self"><span class="screen-reader-text">YouTube</span><svg class="icon icon-youtube" aria-hidden="true" role="presentation"> <use href="#icon-youtube" xlink:href="#icon-youtube"></use> </svg>							</a>
+						</li>
+					
+				
+											<li class="jetpack-social-widget-item">
+							<a href="https://twitter.com/mallotine" target="_self"><span class="screen-reader-text">Twitter</span><svg class="icon icon-twitter" aria-hidden="true" role="presentation"> <use href="#icon-twitter" xlink:href="#icon-twitter"></use> </svg>							</a>
+						</li>
+					
+				
+											<li class="jetpack-social-widget-item">
+							<a href="https://www.instagram.com/laclassedemallory/" target="_self"><span class="screen-reader-text">Instagram</span><svg class="icon icon-instagram" aria-hidden="true" role="presentation"> <use href="#icon-instagram" xlink:href="#icon-instagram"></use> </svg>							</a>
+						</li>
+					
+				
+											<li class="jetpack-social-widget-item">
+							<a href="https://www.facebook.com/laclassedemallory" target="_self"><span class="screen-reader-text">Facebook</span><svg class="icon icon-facebook" aria-hidden="true" role="presentation"> <use href="#icon-facebook" xlink:href="#icon-facebook"></use> </svg>							</a>
+						</li>
+					
+				
+			</ul>
+
+			</aside><aside id="search-3" class="widget widget_search"><h1 class="widget-title">Rechercher sur le site</h1><form role="search" method="get" class="search-form" action="https://laclassedemallory.net/">
+				<label>
+					<span class="screen-reader-text">Rechercher&nbsp;:</span>
+					<input type="search" class="search-field" placeholder="Recherche&hellip;" value="" name="s" />
+				</label>
+				<input type="submit" class="search-submit" value="Rechercher" />
+			</form></aside><aside id="text-13" class="widget widget_text"><h1 class="widget-title">Mon travail édité&#8230;</h1>			<div class="textwidget"><p>L&rsquo;atelier de lecture DECLIC chez Retz</p>
+<p><a href="https://www.editions-retz.com/ecole-elementaire/cm2/francais/l-atelier-de-lecture-declic-ce2-cm1-cm2-ressources-numeriques-9782725643892.html" target="_blank" rel="noopener"><img class="aligncenter" src="https://www.editions-retz.com/sites/default/files/styles/mobile_ouvrage_complet/public/visuels/9782725643892.jpg?itok=WIvKQajr" alt="L'atelier de lecture DECLIC - CE2-CM1-CM2 (+ ressources numériques)" width="180" height="232" /></a></p>
+<p>Chez Jocatop, vous trouverez mes fichiers de français.<br />
+CM2<br />
+<a href="https://jocatop.fr/cm2/286-jules-l-apprenti-pirate-9782363951625.html?search_query=pirate&amp;results=2" target="_blank" rel="noopener"><img loading="lazy" class="wp-image-7621 aligncenter" src="https://laclassedemallory.files.wordpress.com/2018/06/jules.png?w=300" alt="" width="155" height="155" srcset="https://laclassedemallory.files.wordpress.com/2018/06/jules.png?w=300 300w, https://laclassedemallory.files.wordpress.com/2018/06/jules.png?w=155 155w, https://laclassedemallory.files.wordpress.com/2018/06/jules.png?w=310 310w, https://laclassedemallory.files.wordpress.com/2018/06/jules.png?w=150 150w" sizes="(max-width: 155px) 100vw, 155px" /></a>CM1</p>
+<p><a href="https://jocatop.fr/home/297-arthus-le-voyageur-de-l-espace-9782363951656.html?search_query=monhard&amp;results=3" target="_blank" rel="noopener"><img loading="lazy" class="wp-image-7620 aligncenter" src="https://laclassedemallory.files.wordpress.com/2018/06/arthus.png?w=300" alt="" width="153" height="153" srcset="https://laclassedemallory.files.wordpress.com/2018/06/arthus.png?w=300 300w, https://laclassedemallory.files.wordpress.com/2018/06/arthus.png?w=153 153w, https://laclassedemallory.files.wordpress.com/2018/06/arthus.png?w=306 306w, https://laclassedemallory.files.wordpress.com/2018/06/arthus.png?w=150 150w" sizes="(max-width: 153px) 100vw, 153px" /></a><br />
+CE2<br />
+<a href="https://jocatop.fr/ce2/296-zoe-la-paleolontologue-9782363951663.html?search_query=monhard&amp;results=3" target="_blank" rel="noopener"><img loading="lazy" class=" wp-image-7619 aligncenter" src="https://laclassedemallory.files.wordpress.com/2018/06/zoecc81.png?w=300" alt="" width="151" height="151" srcset="https://laclassedemallory.files.wordpress.com/2018/06/zoecc81.png?w=151 151w, https://laclassedemallory.files.wordpress.com/2018/06/zoecc81.png?w=302 302w" sizes="(max-width: 151px) 100vw, 151px" /></a></p>
+<p>CE1<a href="https://jocatop.fr/ce1/344-zack-l-eclair-et-lily-la-tornade-les-superheros-du-francais-9782363952097.html" target="_blank" rel="noopener"><img loading="lazy" class="wp-image-9488 aligncenter" src="https://laclassedemallory.files.wordpress.com/2019/10/zack-l-eclair-et-lily-la-tornade-les-superheros-du-francais.png" alt="" width="118" height="118" srcset="https://laclassedemallory.files.wordpress.com/2019/10/zack-l-eclair-et-lily-la-tornade-les-superheros-du-francais.png?w=118&amp;h=118 118w, https://laclassedemallory.files.wordpress.com/2019/10/zack-l-eclair-et-lily-la-tornade-les-superheros-du-francais.png?w=236&amp;h=236 236w, https://laclassedemallory.files.wordpress.com/2019/10/zack-l-eclair-et-lily-la-tornade-les-superheros-du-francais.png?w=150&amp;h=150 150w" sizes="(max-width: 118px) 100vw, 118px" /></a></p>
+<p>Et ceux en maths !</p>
+<p>CE1</p>
+<p><a href="https://jocatop.fr/ce1/350-les-enquetes-de-mia-et-pablo.html" target="_blank" rel="noopener"><img loading="lazy" class="wp-image-13093 aligncenter" src="https://laclassedemallory.files.wordpress.com/2022/02/les-enquetes-de-mia-et-pablo.jpeg" alt="" width="166" height="166" srcset="https://laclassedemallory.files.wordpress.com/2022/02/les-enquetes-de-mia-et-pablo.jpeg?w=166&amp;h=166 166w, https://laclassedemallory.files.wordpress.com/2022/02/les-enquetes-de-mia-et-pablo.jpeg?w=150&amp;h=150 150w, https://laclassedemallory.files.wordpress.com/2022/02/les-enquetes-de-mia-et-pablo.jpeg 250w" sizes="(max-width: 166px) 100vw, 166px" /></a></p>
+<p>CE2</p>
+<p><img class="aligncenter" src="https://jocatop.fr/6588-large_default/les-reportages-animaliers-de-maelle-et-noah.jpg" width="180" height="180" /></p>
+<p>CM1</p>
+<p><a href="https://jocatop.fr/cm1/396-le-tour-du-monde-de-sasha-et-max.html" target="_blank" rel="noopener"><img loading="lazy" class=" wp-image-13091 aligncenter" src="https://laclassedemallory.files.wordpress.com/2022/02/le-tour-du-monde-de-sasha-et-max.jpeg" alt="" width="162" height="162" srcset="https://laclassedemallory.files.wordpress.com/2022/02/le-tour-du-monde-de-sasha-et-max.jpeg?w=162&amp;h=162 162w, https://laclassedemallory.files.wordpress.com/2022/02/le-tour-du-monde-de-sasha-et-max.jpeg?w=150&amp;h=150 150w, https://laclassedemallory.files.wordpress.com/2022/02/le-tour-du-monde-de-sasha-et-max.jpeg 250w" sizes="(max-width: 162px) 100vw, 162px" /></a></p>
+<p>CM2</p>
+<p><a href="https://jocatop.fr/mathematiques/416-les-voyages-temporels-d-ines-et-gaspard.html" target="_blank" rel="noopener"><img loading="lazy" class=" wp-image-13092 aligncenter" src="https://laclassedemallory.files.wordpress.com/2022/02/les-voyages-temporels-d-ines-et-gaspard.jpeg" alt="" width="172" height="172" srcset="https://laclassedemallory.files.wordpress.com/2022/02/les-voyages-temporels-d-ines-et-gaspard.jpeg?w=172&amp;h=172 172w, https://laclassedemallory.files.wordpress.com/2022/02/les-voyages-temporels-d-ines-et-gaspard.jpeg?w=150&amp;h=150 150w, https://laclassedemallory.files.wordpress.com/2022/02/les-voyages-temporels-d-ines-et-gaspard.jpeg 250w" sizes="(max-width: 172px) 100vw, 172px" /></a></p>
+<p>Mes cahiers de vacances façon Escape Game chez Larousse :</p>
+<p><a href="https://www.amazon.fr/gp/product/2035972574/ref=as_li_tl?ie=UTF8&amp;camp=1642&amp;creative=6746&amp;creativeASIN=2035972574&amp;linkCode=as2&amp;tag=wwwlaclassede-21&amp;linkId=b699534137553ce810b7d53125ebfd11"><img loading="lazy" class="wp-image-8663 aligncenter" src="https://laclassedemallory.files.wordpress.com/2019/04/cm2.jpeg" alt="" width="124" height="181" srcset="https://laclassedemallory.files.wordpress.com/2019/04/cm2.jpeg?w=124&amp;h=181 124w, https://laclassedemallory.files.wordpress.com/2019/04/cm2.jpeg?w=102&amp;h=150 102w, https://laclassedemallory.files.wordpress.com/2019/04/cm2.jpeg 200w" sizes="(max-width: 124px) 100vw, 124px" /></a></p>
+<p><a href="https://www.amazon.fr/gp/product/2035972566/ref=as_li_tl?ie=UTF8&amp;tag=wwwlaclassede-21&amp;camp=1642&amp;creative=6746&amp;linkCode=as2&amp;creativeASIN=2035972566&amp;linkId=25f7405752f778be127e87b790e9e993"> <img loading="lazy" class="wp-image-8664 aligncenter" src="https://laclassedemallory.files.wordpress.com/2019/04/cm1.jpg?w=205" alt="" width="128" height="187" srcset="https://laclassedemallory.files.wordpress.com/2019/04/cm1.jpg?w=205 205w, https://laclassedemallory.files.wordpress.com/2019/04/cm1.jpg?w=128 128w, https://laclassedemallory.files.wordpress.com/2019/04/cm1.jpg?w=256 256w, https://laclassedemallory.files.wordpress.com/2019/04/cm1.jpg?w=103 103w" sizes="(max-width: 128px) 100vw, 128px" /></a></p>
+<p>Mon fichier d&rsquo;histoire CM1</p>
+<p><a href="https://www.laclasse.fr/ressources-pedagogiques/fichier-histoire-cm1" target="_blank" rel="noopener"><img loading="lazy" class=" wp-image-10313 aligncenter" src="https://laclassedemallory.files.wordpress.com/2020/04/fichier-histoire-cm1.jpg" alt="" width="153" height="207" srcset="https://laclassedemallory.files.wordpress.com/2020/04/fichier-histoire-cm1.jpg?w=153&amp;h=207 153w, https://laclassedemallory.files.wordpress.com/2020/04/fichier-histoire-cm1.jpg?w=110&amp;h=150 110w, https://laclassedemallory.files.wordpress.com/2020/04/fichier-histoire-cm1.jpg 162w" sizes="(max-width: 153px) 100vw, 153px" /></a></p>
+<p>Mon livre sur la 1ère GM</p>
+<p><a href="https://www.amazon.fr/gp/product/B01N7N0J02/ref=as_li_tl?ie=UTF8&amp;camp=1642&amp;creative=6746&amp;creativeASIN=B01N7N0J02&amp;linkCode=as2&amp;tag=wwwlaclassede-21&amp;linkId=10667715973f7b53b957a557e04e5121" target="_blank" rel="noopener"><img class="aligncenter" src="//ws-eu.amazon-adsystem.com/widgets/q?_encoding=UTF8&amp;MarketPlace=FR&amp;ASIN=B01N7N0J02&amp;ServiceVersion=20070822&amp;ID=AsinImage&amp;WS=1&amp;Format=_SL250_&amp;tag=wwwlaclassede-21" width="97" height="140" border="0" /></a></p>
+</div>
+		</aside><aside id="text-18" class="widget widget_text"><h1 class="widget-title">Partenariat</h1>			<div class="textwidget"><p><strong><a href="https://www.educationenchantee.com/?referrer=3688908"><img loading="lazy" class="wp-image-9794 aligncenter" src="https://laclassedemallory.files.wordpress.com/2020/02/eelogo.gif" alt="" width="163" height="134" srcset="https://laclassedemallory.files.wordpress.com/2020/02/eelogo.gif?w=163&amp;h=134 163w, https://laclassedemallory.files.wordpress.com/2020/02/eelogo.gif?w=150&amp;h=124 150w, https://laclassedemallory.files.wordpress.com/2020/02/eelogo.gif 300w" sizes="(max-width: 163px) 100vw, 163px" /><img loading="lazy" class="wp-image-9796 aligncenter" src="https://laclassedemallory.files.wordpress.com/2020/02/cc6111_5.jpg?w=300" alt="" width="117" height="117" srcset="https://laclassedemallory.files.wordpress.com/2020/02/cc6111_5.jpg?w=117 117w, https://laclassedemallory.files.wordpress.com/2020/02/cc6111_5.jpg?w=234 234w, https://laclassedemallory.files.wordpress.com/2020/02/cc6111_5.jpg?w=150 150w" sizes="(max-width: 117px) 100vw, 117px" /></a></strong></p>
+<p><strong>Obtenez des avantages en passant par ce lien !</strong></p>
+<p>**************************</p>
+<p><strong>Escape Game à faire en classe ou à la maison</strong></p>
+<p><a href="https://escape-kit.com/" target="_blank" rel="noopener"><img loading="lazy" class="alignnone size-medium wp-image-9653" src="https://laclassedemallory.files.wordpress.com/2019/12/logo_carrecc81.png?w=300" alt="" width="300" height="300" srcset="https://laclassedemallory.files.wordpress.com/2019/12/logo_carrecc81.png?w=300 300w, https://laclassedemallory.files.wordpress.com/2019/12/logo_carrecc81.png?w=600 600w, https://laclassedemallory.files.wordpress.com/2019/12/logo_carrecc81.png?w=150 150w" sizes="(max-width: 300px) 100vw, 300px" /></a></p>
+<p><strong>10% de remise avec le code : <em>Classemallory</em></strong></p>
+<p>**************************</p>
+<p><strong>L&rsquo;Eker de Del-house</strong></p>
+<p><a href="https://del-house.fr/Fournitures-Scolaires-Bureau--0000220-vente/" target="_blank" rel="noopener"><img loading="lazy" class="wp-image-10604 aligncenter" src="https://laclassedemallory.files.wordpress.com/2020/05/capture-de28099ecc81cran-2020-05-27-acc80-10.57.35.png?w=300" alt="" width="154" height="153" srcset="https://laclassedemallory.files.wordpress.com/2020/05/capture-de28099ecc81cran-2020-05-27-acc80-10.57.35.png?w=300 300w, https://laclassedemallory.files.wordpress.com/2020/05/capture-de28099ecc81cran-2020-05-27-acc80-10.57.35.png?w=154 154w, https://laclassedemallory.files.wordpress.com/2020/05/capture-de28099ecc81cran-2020-05-27-acc80-10.57.35.png?w=308 308w, https://laclassedemallory.files.wordpress.com/2020/05/capture-de28099ecc81cran-2020-05-27-acc80-10.57.35.png?w=150 150w" sizes="(max-width: 154px) 100vw, 154px" /></a></p>
+<p><strong>5% de réduction avec le code :</strong> <b>MALE3 </b></p>
+</div>
+		</aside><aside id="wpcom_instagram_widget-3" class="widget widget_wpcom_instagram_widget"><h1 class="widget-title">Instagram</h1><div class="wpcom-instagram-images wpcom-instagram-columns-2">
+<a href="https://www.instagram.com/p/C7hFjwzID6t/" target="_self"><div class="sq-bg-image" style="background-image: url(https://scontent-iad3-2.cdninstagram.com/v/t39.30808-6/445221754_18443684893020535_7358379231164099463_n.jpg?_nc_cat=109&#038;ccb=1-7&#038;_nc_sid=18de74&#038;_nc_ohc=tg7rJvb_1v8Q7kNvgE6WqXW&#038;_nc_ht=scontent-iad3-2.cdninstagram.com&#038;edm=ANo9K5cEAAAA&#038;oh=00_AYDzqnB-_KBCy_TP7T1gR9-qZwDbfiLYvVc_uobSF_Fb6g&#038;oe=667044A4)"><span class="screen-reader-text">🎁Cadeau fête des parents </span></div></a>
+<a href="https://www.instagram.com/reel/C5qzx4ioWiT/" target="_self"><div class="sq-bg-image" style="background-image: url(https://scontent-iad3-1.cdninstagram.com/v/t51.29350-15/437290923_448092481079416_2749925931233618192_n.jpg?_nc_cat=110&#038;ccb=1-7&#038;_nc_sid=18de74&#038;_nc_ohc=tMqNxOyqbi4Q7kNvgFPrSEZ&#038;_nc_ht=scontent-iad3-1.cdninstagram.com&#038;edm=ANo9K5cEAAAA&#038;oh=00_AYCVspd4KokI3Yt2ed8fKWiMOFCSLJR45flwcEAHjwducw&#038;oe=667035DF)"><span class="screen-reader-text"></span></div></a>
+<a href="https://www.instagram.com/p/C5glCXAIrEz/" target="_self"><div class="sq-bg-image" style="background-image: url(https://scontent-iad3-1.cdninstagram.com/v/t51.29350-15/437272549_1135921160772629_8389669625503257776_n.jpg?_nc_cat=101&#038;ccb=1-7&#038;_nc_sid=18de74&#038;_nc_ohc=S7ChCxAJ5cIQ7kNvgHtkG5z&#038;_nc_ht=scontent-iad3-1.cdninstagram.com&#038;edm=ANo9K5cEAAAA&#038;oh=00_AYCK_bxYX20pVxpvDsGyNf1wgwmbRrb_fVpN7pP9b-zAJQ&#038;oe=66705C75)"><span class="screen-reader-text">🎨Cette semaine, tous les élèves de l’école de la PS au CM2 se transforment en artistes et ont le droit de peindre sur les murs de l’école ! </span></div></a>
+<a href="https://www.instagram.com/p/C4yECmWIwNi/" target="_self"><div class="sq-bg-image" style="background-image: url(https://scontent-iad3-2.cdninstagram.com/v/t51.29350-15/433425857_1466690370893258_4286439156365699608_n.jpg?_nc_cat=109&#038;ccb=1-7&#038;_nc_sid=18de74&#038;_nc_ohc=SEkotURhPH0Q7kNvgHqo-kr&#038;_nc_ht=scontent-iad3-2.cdninstagram.com&#038;edm=ANo9K5cEAAAA&#038;oh=00_AYDLjr10RggeVGEwEq7BwBshxO4oOOn3o9V8v_wXpJzTvw&#038;oe=66705630)"><span class="screen-reader-text">@melimelune_ , @universdemaclasse et moi-même sommes heureuses de vous présenter notre deuxième ouvrage ! 📕 </span></div></a>
+</div>
+</aside><aside id="blog_subscription-3" class="widget widget_blog_subscription jetpack_subscription_widget"><h1 class="widget-title"><label for="subscribe-field">S&#039;abonner au blog via courriel</label></h1>
+
+			<div class="wp-block-jetpack-subscriptions__container">
+			<form
+				action="https://subscribe.wordpress.com"
+				method="post"
+				accept-charset="utf-8"
+				data-blog="125038514"
+				data-post_access_level="everybody"
+				id="subscribe-blog"
+			>
+				<p>Entrez votre adresse mail pour suivre ce blog et être notifié par email des nouvelles publications.</p>
+				<p id="subscribe-email">
+					<label
+						id="subscribe-field-label"
+						for="subscribe-field"
+						class="screen-reader-text"
+					>
+						Adresse e-mail :					</label>
+
+					<input
+							type="email"
+							name="email"
+							
+							style="width: 95%; padding: 1px 10px"
+							placeholder="Adresse e-mail"
+							value=""
+							id="subscribe-field"
+							required
+						/>				</p>
+
+				<p id="subscribe-submit"
+									>
+					<input type="hidden" name="action" value="subscribe"/>
+					<input type="hidden" name="blog_id" value="125038514"/>
+					<input type="hidden" name="source" value="https://laclassedemallory.net/category/non-classe/"/>
+					<input type="hidden" name="sub-type" value="widget"/>
+					<input type="hidden" name="redirect_fragment" value="subscribe-blog"/>
+					<input type="hidden" id="_wpnonce" name="_wpnonce" value="60e87a3097" />					<button type="submit"
+													class="wp-block-button__link"
+																	>
+						Suivre					</button>
+				</p>
+			</form>
+							<div class="wp-block-jetpack-subscriptions__subscount">
+					Rejoignez 21 milliers d’autres abonnés				</div>
+						</div>
+			
+</aside>
+		<aside id="recent-posts-3" class="widget widget_recent_entries">
+		<h1 class="widget-title">Derniers articles</h1>
+		<ul>
+											<li>
+					<a href="https://laclassedemallory.net/2023/12/18/escape-game-bal-de-noel-a-poudlard-version-2023/">Escape Game &#8211; Bal de Noël à Poudlard &#8211; version&nbsp;2023</a>
+									</li>
+											<li>
+					<a href="https://laclassedemallory.net/2023/08/15/theme-de-classe-harry-potter-le-tour-du-monde-2023-2024/">Thème de classe Harry Potter &amp; le tour du monde &#8211;&nbsp;2023/2024</a>
+									</li>
+											<li>
+					<a href="https://laclassedemallory.net/2023/08/15/escape-game-rentree-a-poudlard-annee-2023/">Escape Game &#8211; Rentrée à Poudlard &#8211; année&nbsp;2023</a>
+									</li>
+											<li>
+					<a href="https://laclassedemallory.net/2023/08/14/resolution-de-problemes-2023-2024/">Résolution de problèmes&nbsp;2023-2024</a>
+									</li>
+											<li>
+					<a href="https://laclassedemallory.net/2023/08/13/lecons-et-exercices-de-francais-cm1-annee-2023-2024/">Leçons et exercices de français CM1 &#8211; année&nbsp;2023-2024</a>
+									</li>
+					</ul>
+
+		</aside><aside id="top-posts-7" class="widget widget_top-posts"><h1 class="widget-title">Vos favoris du moment&#8230;</h1><ul class='widgets-list-layout no-grav'>
+<li><a href="https://laclassedemallory.net/2018/04/12/evaluations-maths-cm2/" title="Evaluations maths CM2" class="bump-view" data-bump-view="tp"><img loading="lazy" width="40" height="40" src="https://laclassedemallory.files.wordpress.com/2018/04/ecc81val-maths.jpeg?w=40&#038;h=40&#038;crop=1" srcset="https://laclassedemallory.files.wordpress.com/2018/04/ecc81val-maths.jpeg?w=40&amp;h=40&amp;crop=1 1x, https://laclassedemallory.files.wordpress.com/2018/04/ecc81val-maths.jpeg?w=60&amp;h=60&amp;crop=1 1.5x, https://laclassedemallory.files.wordpress.com/2018/04/ecc81val-maths.jpeg?w=80&amp;h=80&amp;crop=1 2x, https://laclassedemallory.files.wordpress.com/2018/04/ecc81val-maths.jpeg?w=120&amp;h=120&amp;crop=1 3x, https://laclassedemallory.files.wordpress.com/2018/04/ecc81val-maths.jpeg?w=160&amp;h=160&amp;crop=1 4x" alt="Evaluations maths CM2" data-pin-nopin="true" class="widgets-list-layout-blavatar" /></a><div class="widgets-list-layout-links">
+								<a href="https://laclassedemallory.net/2018/04/12/evaluations-maths-cm2/" title="Evaluations maths CM2" class="bump-view" data-bump-view="tp">Evaluations maths CM2</a>
+							</div>
+							</li><li><a href="https://laclassedemallory.net/2018/08/07/fichier-devaluation-maths-cm1/" title="Fichier d&#039;évaluation maths CM1" class="bump-view" data-bump-view="tp"><img loading="lazy" width="40" height="40" src="https://laclassedemallory.files.wordpress.com/2018/08/ecc81val-maths.png?w=40&#038;h=40&#038;crop=1" srcset="https://laclassedemallory.files.wordpress.com/2018/08/ecc81val-maths.png?w=40&amp;h=40&amp;crop=1 1x, https://laclassedemallory.files.wordpress.com/2018/08/ecc81val-maths.png?w=60&amp;h=60&amp;crop=1 1.5x, https://laclassedemallory.files.wordpress.com/2018/08/ecc81val-maths.png?w=80&amp;h=80&amp;crop=1 2x, https://laclassedemallory.files.wordpress.com/2018/08/ecc81val-maths.png?w=120&amp;h=120&amp;crop=1 3x, https://laclassedemallory.files.wordpress.com/2018/08/ecc81val-maths.png?w=160&amp;h=160&amp;crop=1 4x" alt="Fichier d&#039;évaluation maths CM1" data-pin-nopin="true" class="widgets-list-layout-blavatar" /></a><div class="widgets-list-layout-links">
+								<a href="https://laclassedemallory.net/2018/08/07/fichier-devaluation-maths-cm1/" title="Fichier d&#039;évaluation maths CM1" class="bump-view" data-bump-view="tp">Fichier d&#039;évaluation maths CM1</a>
+							</div>
+							</li><li><a href="https://laclassedemallory.net/2020/04/02/conjugaison-cm2-les-exercices-2/" title="Conjugaison CM2 - Les exercices" class="bump-view" data-bump-view="tp"><img loading="lazy" width="40" height="40" src="https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-02-acc80-15.56.15.png?w=40&#038;h=40&#038;crop=1" srcset="https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-02-acc80-15.56.15.png?w=40&amp;h=40&amp;crop=1 1x, https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-02-acc80-15.56.15.png?w=60&amp;h=60&amp;crop=1 1.5x, https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-02-acc80-15.56.15.png?w=80&amp;h=80&amp;crop=1 2x, https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-02-acc80-15.56.15.png?w=120&amp;h=120&amp;crop=1 3x, https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-02-acc80-15.56.15.png?w=160&amp;h=160&amp;crop=1 4x" alt="Conjugaison CM2 - Les exercices" data-pin-nopin="true" class="widgets-list-layout-blavatar" /></a><div class="widgets-list-layout-links">
+								<a href="https://laclassedemallory.net/2020/04/02/conjugaison-cm2-les-exercices-2/" title="Conjugaison CM2 - Les exercices" class="bump-view" data-bump-view="tp">Conjugaison CM2 - Les exercices</a>
+							</div>
+							</li><li><a href="https://laclassedemallory.net/2020/04/02/conjugaison-cm2-les-exercices/" title="Conjugaison CM1 - les exercices" class="bump-view" data-bump-view="tp"><img loading="lazy" width="40" height="40" src="https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-02-acc80-15.38.42-1.png?w=40&#038;h=40&#038;crop=1" srcset="https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-02-acc80-15.38.42-1.png?w=40&amp;h=40&amp;crop=1 1x, https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-02-acc80-15.38.42-1.png?w=60&amp;h=60&amp;crop=1 1.5x, https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-02-acc80-15.38.42-1.png?w=80&amp;h=80&amp;crop=1 2x, https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-02-acc80-15.38.42-1.png?w=120&amp;h=120&amp;crop=1 3x, https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-02-acc80-15.38.42-1.png?w=160&amp;h=160&amp;crop=1 4x" alt="Conjugaison CM1 - les exercices" data-pin-nopin="true" class="widgets-list-layout-blavatar" /></a><div class="widgets-list-layout-links">
+								<a href="https://laclassedemallory.net/2020/04/02/conjugaison-cm2-les-exercices/" title="Conjugaison CM1 - les exercices" class="bump-view" data-bump-view="tp">Conjugaison CM1 - les exercices</a>
+							</div>
+							</li><li><a href="https://laclassedemallory.net/2020/04/03/grammaire-cm2-les-exercices/" title="Grammaire CM2 - les exercices" class="bump-view" data-bump-view="tp"><img loading="lazy" width="40" height="40" src="https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-03-acc80-16.03.16.png?w=40&#038;h=40&#038;crop=1" srcset="https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-03-acc80-16.03.16.png?w=40&amp;h=40&amp;crop=1 1x, https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-03-acc80-16.03.16.png?w=60&amp;h=60&amp;crop=1 1.5x, https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-03-acc80-16.03.16.png?w=80&amp;h=80&amp;crop=1 2x, https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-03-acc80-16.03.16.png?w=120&amp;h=120&amp;crop=1 3x, https://laclassedemallory.files.wordpress.com/2020/04/capture-de28099ecc81cran-2020-04-03-acc80-16.03.16.png?w=160&amp;h=160&amp;crop=1 4x" alt="Grammaire CM2 - les exercices" data-pin-nopin="true" class="widgets-list-layout-blavatar" /></a><div class="widgets-list-layout-links">
+								<a href="https://laclassedemallory.net/2020/04/03/grammaire-cm2-les-exercices/" title="Grammaire CM2 - les exercices" class="bump-view" data-bump-view="tp">Grammaire CM2 - les exercices</a>
+							</div>
+							</li></ul>
+</aside><aside id="text-19" class="widget widget_text"><h1 class="widget-title">Programme partenaire Amazon</h1>			<div class="textwidget"><p><a href="https://www.amazon.fr/gp/product/B01A9A9XLW/ref=as_li_tl?ie=UTF8&amp;camp=1642&amp;creative=6746&amp;creativeASIN=B01A9A9XLW&amp;linkCode=as2&amp;tag=wwwlaclassede-21&amp;linkId=777755dcfd5d4c6212bc075dd2d9ddba"><img loading="lazy" class="wp-image-8870 aligncenter" src="https://laclassedemallory.files.wordpress.com/2019/07/amazon-metz.jpg?w=300" alt="" width="118" height="66" srcset="https://laclassedemallory.files.wordpress.com/2019/07/amazon-metz.jpg?w=118 118w, https://laclassedemallory.files.wordpress.com/2019/07/amazon-metz.jpg?w=236 236w, https://laclassedemallory.files.wordpress.com/2019/07/amazon-metz.jpg?w=150 150w" sizes="(max-width: 118px) 100vw, 118px" /></a></p>
+</div>
+		</aside><aside id="blog-stats-5" class="widget widget_blog-stats"><h1 class="widget-title">Statistiques du blog</h1>		<ul>
+			<li>64&nbsp;811&nbsp;440 hits</li>
+		</ul>
+		</aside><aside id="text-15" class="widget widget_text"><h1 class="widget-title">Licence</h1>			<div class="textwidget"><p><a href="http://creativecommons.org/licenses/by-nc-nd/3.0/fr/" rel="license"><img style="border-width:0;" src="https://i.creativecommons.org/l/by-nc-nd/3.0/fr/88x31.png" alt="Licence Creative Commons" /></a><br />
+Ce(tte) œuvre est mise à disposition selon les termes de la <a href="http://creativecommons.org/licenses/by-nc-nd/3.0/fr/" rel="license">Licence Creative Commons Attribution &#8211; Pas d’Utilisation Commerciale &#8211; Pas de Modification 3.0 France</a>.</p>
+</div>
+		</aside><aside id="text-17" class="widget widget_text"><h1 class="widget-title">Faire un don</h1>			<div class="textwidget"><p>Ce blog dont l&rsquo;ensemble des ressources sont gratuites a un coût. Vous pouvez contribuer si vous le souhaitez à son fonctionnement en faisant un don.</p>
+<p><a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&amp;business=K9JKQCLN3JBWJ&amp;item_name=Financer+le+fonctionnement+du+blog+de+partage+de+ressources+p%C3%A9dagogiques+gratuites.&amp;currency_code=EUR&amp;source=url"><img loading="lazy" class="wp-image-8866 aligncenter" src="https://laclassedemallory.files.wordpress.com/2019/07/capture-de28099ecc81cran-2019-07-03-acc80-09.17.20.png?w=296" alt="" width="105" height="107" srcset="https://laclassedemallory.files.wordpress.com/2019/07/capture-de28099ecc81cran-2019-07-03-acc80-09.17.20.png?w=105 105w, https://laclassedemallory.files.wordpress.com/2019/07/capture-de28099ecc81cran-2019-07-03-acc80-09.17.20.png?w=210 210w, https://laclassedemallory.files.wordpress.com/2019/07/capture-de28099ecc81cran-2019-07-03-acc80-09.17.20.png?w=148 148w" sizes="(max-width: 105px) 100vw, 105px" /></a></p>
+</div>
+		</aside>			<div id="atatags-1250385143-666a7b0d645b2"></div>
+			
+			<script>
+				__ATA.cmd.push(function() {
+					__ATA.initDynamicSlot({
+						id: 'atatags-1250385143-666a7b0d645b2',
+						location: 140,
+						formFactor: '003',
+						label: {
+							text: 'Publicités',
+						},
+						creative: {
+							reportAd: {
+								text: 'Report this Ad',
+							},
+							privacySettings: {
+								text: 'Confidentialité',
+								
+							}
+						}
+					});
+				});
+			</script></div><!-- #secondary -->
+
+	</div><!-- #content -->
+
+	<footer id="colophon" class="site-footer" role="contentinfo">
+
+		<div class="site-info">
+	<a href="https://wordpress.com/?ref=footer_blog" rel="nofollow">Propulsé par WordPress.com.</a>
+	
+	</div><!-- .site-info -->
+
+	</footer><!-- #colophon -->
+</div><!-- #page -->
+
+		<script type="text/javascript">
+		var infiniteScroll = {"settings":{"id":"main","ajaxurl":"https:\/\/laclassedemallory.net\/?infinity=scrolling","type":"scroll","wrapper":true,"wrapper_class":"infinite-wrap","footer":"page","click_handle":"1","text":"Articles pr\u00e9c\u00e9dents","totop":"Retour en Haut","currentday":"01.05.17","order":"DESC","scripts":[],"styles":[],"google_analytics":false,"offset":1,"history":{"host":"laclassedemallory.net","path":"\/category\/non-classe\/page\/%d\/","use_trailing_slashes":true,"parameters":""},"query_args":{"category_name":"non-classe","error":"","m":"","p":0,"post_parent":"","subpost":"","subpost_id":"","attachment":"","attachment_id":0,"name":"","pagename":"","page_id":0,"second":"","minute":"","hour":"","day":0,"monthnum":0,"year":0,"w":0,"tag":"","cat":6325,"tag_id":"","author":"","author_name":"","feed":"","tb":"","paged":0,"meta_key":"","meta_value":"","preview":"","s":"","sentence":"","title":"","fields":"","menu_order":"","embed":"","category__in":[],"category__not_in":[],"category__and":[],"post__in":[],"post__not_in":[],"post_name__in":[],"tag__in":[],"tag__not_in":[],"tag__and":[],"tag_slug__in":[],"tag_slug__and":[],"post_parent__in":[],"post_parent__not_in":[],"author__in":[],"author__not_in":[],"search_columns":[],"lazy_load_term_meta":false,"posts_per_page":10,"ignore_sticky_posts":false,"suppress_filters":false,"cache_results":true,"update_post_term_cache":true,"update_menu_item_cache":false,"update_post_meta_cache":true,"post_type":"","nopaging":false,"comments_per_page":"50","no_found_rows":false,"order":"DESC"},"query_before":"2024-06-13 05:52:29","last_post_date":"2017-05-01 13:16:31","body_class":"infinite-scroll neverending","loading_text":"Chargement d\u2019une nouvelle page","stats":"blog=125038514&v=wpcom&tz=1&user_id=0&subd=laclassedemallory&x_pagetype=infinite"}};
+		</script>
+		<!--  -->
+<script type="text/javascript" src="//0.gravatar.com/js/hovercards/hovercards.min.js?ver=2024244cee4591fae4bea45ee2571078613ea2fab8a404a7b5ceb1cf2b511ebc67fadd" id="grofiles-cards-js"></script>
+<script type="text/javascript" id="wpgroho-js-extra">
+/* <![CDATA[ */
+var WPGroHo = {"my_hash":""};
+/* ]]> */
+</script>
+<script crossorigin='anonymous' type='text/javascript'  src='https://s0.wp.com/wp-content/mu-plugins/gravatar-hovercards/wpgroho.js?m=1610363240i'></script>
+
+	<script>
+		// Initialize and attach hovercards to all gravatars
+		( function() {
+			function init() {
+				if ( typeof Gravatar === 'undefined' ) {
+					return;
+				}
+
+				if ( typeof Gravatar.init !== 'function' ) {
+					return;
+				}
+
+				Gravatar.profile_cb = function ( hash, id ) {
+					WPGroHo.syncProfileData( hash, id );
+				};
+
+				Gravatar.my_hash = WPGroHo.my_hash;
+				Gravatar.init(
+					'body',
+					'#wp-admin-bar-my-account',
+					{
+						i18n: {
+							'Edit your profile': 'Modifier votre profil',
+							'View profile': 'View profile',
+							'Sorry, we are unable to load this Gravatar profile.': 'Sorry, we are unable to load this Gravatar profile.',
+							'Sorry, we are unable to load this Gravatar profile. Please check your internet connection.': 'Sorry, we are unable to load this Gravatar profile. Please check your internet connection.',
+							'Too Many Requests.': 'Too Many Requests.',
+							'Internal Server Error.': 'Internal Server Error.',
+						},
+					}
+				);
+			}
+
+			if ( document.readyState !== 'loading' ) {
+				init();
+			} else {
+				document.addEventListener( 'DOMContentLoaded', init );
+			}
+		} )();
+	</script>
+
+		<div style="display:none">
+	</div>
+		<div id="infinite-footer">
+			<div class="container">
+				<div class="blog-info">
+					<a id="infinity-blog-title" href="https://laclassedemallory.net/" rel="home">
+						La classe de Mallory					</a>
+				</div>
+				<div class="blog-credits">
+					<a href="https://wordpress.com/?ref=footer_blog" rel="nofollow">Propulsé par WordPress.com.</a> 				</div>
+			</div>
+		</div><!-- #infinite-footer -->
+				<script type="text/javascript">
+		( function() {
+			function init() {
+				document.body.addEventListener( 'is.post-load', function() {
+					if ( typeof __ATA.insertInlineAds === 'function' ) {
+						__ATA.insertInlineAds();
+					}
+				} );
+			}
+
+			if ( document.readyState !== 'loading' ) {
+				init();
+			} else {
+				document.addEventListener( 'DOMContentLoaded', init );
+			}
+		} )();
+		</script>	<div id="actionbar" style="display: none;"
+			class="actnbr-pub-button actnbr-has-follow">
+		<ul>
+								<li class="actnbr-btn actnbr-hidden">
+								<a class="actnbr-action actnbr-actn-follow " href="">
+			<svg class="gridicon" height="20" width="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path clip-rule="evenodd" d="m4 4.5h12v6.5h1.5v-6.5-1.5h-1.5-12-1.5v1.5 10.5c0 1.1046.89543 2 2 2h7v-1.5h-7c-.27614 0-.5-.2239-.5-.5zm10.5 2h-9v1.5h9zm-5 3h-4v1.5h4zm3.5 1.5h-1v1h1zm-1-1.5h-1.5v1.5 1 1.5h1.5 1 1.5v-1.5-1-1.5h-1.5zm-2.5 2.5h-4v1.5h4zm6.5 1.25h1.5v2.25h2.25v1.5h-2.25v2.25h-1.5v-2.25h-2.25v-1.5h2.25z"  fill-rule="evenodd"></path></svg>
+			<span>Souscrire</span>
+		</a>
+		<a class="actnbr-action actnbr-actn-following  no-display" href="">
+			<svg class="gridicon" height="20" width="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path fill-rule="evenodd" clip-rule="evenodd" d="M16 4.5H4V15C4 15.2761 4.22386 15.5 4.5 15.5H11.5V17H4.5C3.39543 17 2.5 16.1046 2.5 15V4.5V3H4H16H17.5V4.5V12.5H16V4.5ZM5.5 6.5H14.5V8H5.5V6.5ZM5.5 9.5H9.5V11H5.5V9.5ZM12 11H13V12H12V11ZM10.5 9.5H12H13H14.5V11V12V13.5H13H12H10.5V12V11V9.5ZM5.5 12H9.5V13.5H5.5V12Z" fill="#008A20"></path><path class="following-icon-tick" d="M13.5 16L15.5 18L19 14.5" stroke="#008A20" stroke-width="1.5"></path></svg>
+			<span>Abonné</span>
+		</a>
+							<div class="actnbr-popover tip tip-top-left actnbr-notice" id="follow-bubble">
+							<div class="tip-arrow"></div>
+							<div class="tip-inner actnbr-follow-bubble">
+															<ul>
+											<li class="actnbr-sitename">
+			<a href="https://laclassedemallory.net">
+				<img alt='' src='https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=50' srcset='https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=50 1x, https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=75 1.5x, https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=100 2x, https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=150 3x, https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=200 4x' class='avatar avatar-50' height='50' width='50' />				La classe de Mallory			</a>
+		</li>
+										<div class="actnbr-message no-display"></div>
+									<form method="post" action="https://subscribe.wordpress.com" accept-charset="utf-8" style="display: none;">
+																						<div class="actnbr-follow-count">Rejoignez 4&nbsp;418 autres abonnés</div>
+																					<div>
+										<input type="email" name="email" placeholder="Entrez votre adresse e-mail" class="actnbr-email-field" aria-label="Entrez votre adresse e-mail" />
+										</div>
+										<input type="hidden" name="action" value="subscribe" />
+										<input type="hidden" name="blog_id" value="125038514" />
+										<input type="hidden" name="source" value="https://laclassedemallory.net/category/non-classe/" />
+										<input type="hidden" name="sub-type" value="actionbar-follow" />
+										<input type="hidden" id="_wpnonce" name="_wpnonce" value="60e87a3097" />										<div class="actnbr-button-wrap">
+											<button type="submit" value="M’inscrire">
+												M’inscrire											</button>
+										</div>
+									</form>
+									<li class="actnbr-login-nudge">
+										<div>
+											Vous disposez déjà dʼun compte WordPress ? <a href="https://wordpress.com/log-in?redirect_to=https%3A%2F%2Fr-login.wordpress.com%2Fremote-login.php%3Faction%3Dlink%26back%3Dhttps%253A%252F%252Flaclassedemallory.net%252F2021%252F07%252F16%252Fdes-jeux-du-commerce-pour-la-classe%252F">Connectez-vous maintenant.</a>										</div>
+									</li>
+								</ul>
+															</div>
+						</div>
+					</li>
+							<li class="actnbr-ellipsis actnbr-hidden">
+				<svg class="gridicon gridicons-ellipsis" height="24" width="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g><path d="M7 12c0 1.104-.896 2-2 2s-2-.896-2-2 .896-2 2-2 2 .896 2 2zm12-2c-1.104 0-2 .896-2 2s.896 2 2 2 2-.896 2-2-.896-2-2-2zm-7 0c-1.104 0-2 .896-2 2s.896 2 2 2 2-.896 2-2-.896-2-2-2z"/></g></svg>				<div class="actnbr-popover tip tip-top-left actnbr-more">
+					<div class="tip-arrow"></div>
+					<div class="tip-inner">
+						<ul>
+									<li class="actnbr-sitename">
+			<a href="https://laclassedemallory.net">
+				<img alt='' src='https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=50' srcset='https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=50 1x, https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=75 1.5x, https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=100 2x, https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=150 3x, https://laclassedemallory.net/wp-content/uploads/2020/08/cropped-capture-decc81cran-2020-08-07-acc80-16.28.28.png?w=200 4x' class='avatar avatar-50' height='50' width='50' />				La classe de Mallory			</a>
+		</li>
+								<li class="actnbr-folded-customize">
+								<a href="https://laclassedemallory.wordpress.com/wp-admin/customize.php?url=https%3A%2F%2Flaclassedemallory.wordpress.com%2Fcategory%2Fnon-classe%2F">
+									<svg class="gridicon gridicons-customize" height="20" width="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g><path d="M2 6c0-1.505.78-3.08 2-4 0 .845.69 2 2 2 1.657 0 3 1.343 3 3 0 .386-.08.752-.212 1.09.74.594 1.476 1.19 2.19 1.81L8.9 11.98c-.62-.716-1.214-1.454-1.807-2.192C6.753 9.92 6.387 10 6 10c-2.21 0-4-1.79-4-4zm12.152 6.848l1.34-1.34c.607.304 1.283.492 2.008.492 2.485 0 4.5-2.015 4.5-4.5 0-.725-.188-1.4-.493-2.007L18 9l-2-2 3.507-3.507C18.9 3.188 18.225 3 17.5 3 15.015 3 13 5.015 13 7.5c0 .725.188 1.4.493 2.007L3 20l2 2 6.848-6.848c1.885 1.928 3.874 3.753 5.977 5.45l1.425 1.148 1.5-1.5-1.15-1.425c-1.695-2.103-3.52-4.092-5.448-5.977z"/></g></svg>									<span>Personnaliser</span>
+								</a>
+							</li>
+																<li class="actnbr-folded-follow">
+												<a class="actnbr-action actnbr-actn-follow " href="">
+			<svg class="gridicon" height="20" width="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path clip-rule="evenodd" d="m4 4.5h12v6.5h1.5v-6.5-1.5h-1.5-12-1.5v1.5 10.5c0 1.1046.89543 2 2 2h7v-1.5h-7c-.27614 0-.5-.2239-.5-.5zm10.5 2h-9v1.5h9zm-5 3h-4v1.5h4zm3.5 1.5h-1v1h1zm-1-1.5h-1.5v1.5 1 1.5h1.5 1 1.5v-1.5-1-1.5h-1.5zm-2.5 2.5h-4v1.5h4zm6.5 1.25h1.5v2.25h2.25v1.5h-2.25v2.25h-1.5v-2.25h-2.25v-1.5h2.25z"  fill-rule="evenodd"></path></svg>
+			<span>Souscrire</span>
+		</a>
+		<a class="actnbr-action actnbr-actn-following  no-display" href="">
+			<svg class="gridicon" height="20" width="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path fill-rule="evenodd" clip-rule="evenodd" d="M16 4.5H4V15C4 15.2761 4.22386 15.5 4.5 15.5H11.5V17H4.5C3.39543 17 2.5 16.1046 2.5 15V4.5V3H4H16H17.5V4.5V12.5H16V4.5ZM5.5 6.5H14.5V8H5.5V6.5ZM5.5 9.5H9.5V11H5.5V9.5ZM12 11H13V12H12V11ZM10.5 9.5H12H13H14.5V11V12V13.5H13H12H10.5V12V11V9.5ZM5.5 12H9.5V13.5H5.5V12Z" fill="#008A20"></path><path class="following-icon-tick" d="M13.5 16L15.5 18L19 14.5" stroke="#008A20" stroke-width="1.5"></path></svg>
+			<span>Abonné</span>
+		</a>
+										</li>
+																	<li class="actnbr-signup"><a href="https://wordpress.com/start/">S’inscrire</a></li>
+									<li class="actnbr-login"><a href="https://wordpress.com/log-in?redirect_to=https%3A%2F%2Fr-login.wordpress.com%2Fremote-login.php%3Faction%3Dlink%26back%3Dhttps%253A%252F%252Flaclassedemallory.net%252F2021%252F07%252F16%252Fdes-jeux-du-commerce-pour-la-classe%252F">Connexion</a></li>
+																	<li class="flb-report">
+										<a href="https://wordpress.com/abuse/?report_url=https://laclassedemallory.net" target="_blank" rel="noopener noreferrer">
+											Signaler ce contenu										</a>
+									</li>
+																	<li class="actnbr-reader">
+										<a href="https://wordpress.com/read/feeds/74396731">
+											Voir le site dans le Lecteur										</a>
+									</li>
+																	<li class="actnbr-subs">
+										<a href="https://subscribe.wordpress.com/">Gérer les abonnements</a>
+									</li>
+																		<li class="actnbr-fold"><a href="">Réduire cette barre</a></li>
+															</ul>
+					</div>
+				</div>
+			</li>
+		</ul>
+	</div>
+	
+<script>
+window.addEventListener( "load", function( event ) {
+	var link = document.createElement( "link" );
+	link.href = "https://s0.wp.com/wp-content/mu-plugins/actionbar/actionbar.css?v=20240115";
+	link.type = "text/css";
+	link.rel = "stylesheet";
+	document.head.appendChild( link );
+
+	var script = document.createElement( "script" );
+	script.src = "https://s0.wp.com/wp-content/mu-plugins/actionbar/actionbar.js?v=20231122";
+	script.defer = true;
+	document.body.appendChild( script );
+} );
+</script>
+
+			<div id="jp-carousel-loading-overlay">
+			<div id="jp-carousel-loading-wrapper">
+				<span id="jp-carousel-library-loading">&nbsp;</span>
+			</div>
+		</div>
+		<div class="jp-carousel-overlay" style="display: none;">
+
+		<div class="jp-carousel-container">
+			<!-- The Carousel Swiper -->
+			<div
+				class="jp-carousel-wrap swiper-container jp-carousel-swiper-container jp-carousel-transitions"
+				itemscope
+				itemtype="https://schema.org/ImageGallery">
+				<div class="jp-carousel swiper-wrapper"></div>
+				<div class="jp-swiper-button-prev swiper-button-prev">
+					<svg width="25" height="24" viewBox="0 0 25 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<mask id="maskPrev" mask-type="alpha" maskUnits="userSpaceOnUse" x="8" y="6" width="9" height="12">
+							<path d="M16.2072 16.59L11.6496 12L16.2072 7.41L14.8041 6L8.8335 12L14.8041 18L16.2072 16.59Z" fill="white"/>
+						</mask>
+						<g mask="url(#maskPrev)">
+							<rect x="0.579102" width="23.8823" height="24" fill="#FFFFFF"/>
+						</g>
+					</svg>
+				</div>
+				<div class="jp-swiper-button-next swiper-button-next">
+					<svg width="25" height="24" viewBox="0 0 25 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+						<mask id="maskNext" mask-type="alpha" maskUnits="userSpaceOnUse" x="8" y="6" width="8" height="12">
+							<path d="M8.59814 16.59L13.1557 12L8.59814 7.41L10.0012 6L15.9718 12L10.0012 18L8.59814 16.59Z" fill="white"/>
+						</mask>
+						<g mask="url(#maskNext)">
+							<rect x="0.34375" width="23.8822" height="24" fill="#FFFFFF"/>
+						</g>
+					</svg>
+				</div>
+			</div>
+			<!-- The main close buton -->
+			<div class="jp-carousel-close-hint">
+				<svg width="25" height="24" viewBox="0 0 25 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<mask id="maskClose" mask-type="alpha" maskUnits="userSpaceOnUse" x="5" y="5" width="15" height="14">
+						<path d="M19.3166 6.41L17.9135 5L12.3509 10.59L6.78834 5L5.38525 6.41L10.9478 12L5.38525 17.59L6.78834 19L12.3509 13.41L17.9135 19L19.3166 17.59L13.754 12L19.3166 6.41Z" fill="white"/>
+					</mask>
+					<g mask="url(#maskClose)">
+						<rect x="0.409668" width="23.8823" height="24" fill="#FFFFFF"/>
+					</g>
+				</svg>
+			</div>
+			<!-- Image info, comments and meta -->
+			<div class="jp-carousel-info">
+				<div class="jp-carousel-info-footer">
+					<div class="jp-carousel-pagination-container">
+						<div class="jp-swiper-pagination swiper-pagination"></div>
+						<div class="jp-carousel-pagination"></div>
+					</div>
+					<div class="jp-carousel-photo-title-container">
+						<h2 class="jp-carousel-photo-caption"></h2>
+					</div>
+					<div class="jp-carousel-photo-icons-container">
+						<a href="#" class="jp-carousel-icon-btn jp-carousel-icon-info" aria-label="Activer la visibilité des métadonnées sur les photos">
+							<span class="jp-carousel-icon">
+								<svg width="25" height="24" viewBox="0 0 25 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+									<mask id="maskInfo" mask-type="alpha" maskUnits="userSpaceOnUse" x="2" y="2" width="21" height="20">
+										<path fill-rule="evenodd" clip-rule="evenodd" d="M12.7537 2C7.26076 2 2.80273 6.48 2.80273 12C2.80273 17.52 7.26076 22 12.7537 22C18.2466 22 22.7046 17.52 22.7046 12C22.7046 6.48 18.2466 2 12.7537 2ZM11.7586 7V9H13.7488V7H11.7586ZM11.7586 11V17H13.7488V11H11.7586ZM4.79292 12C4.79292 16.41 8.36531 20 12.7537 20C17.142 20 20.7144 16.41 20.7144 12C20.7144 7.59 17.142 4 12.7537 4C8.36531 4 4.79292 7.59 4.79292 12Z" fill="white"/>
+									</mask>
+									<g mask="url(#maskInfo)">
+										<rect x="0.8125" width="23.8823" height="24" fill="#FFFFFF"/>
+									</g>
+								</svg>
+							</span>
+						</a>
+												<a href="#" class="jp-carousel-icon-btn jp-carousel-icon-comments" aria-label="Activer la visibilité des commentaires sur les photos">
+							<span class="jp-carousel-icon">
+								<svg width="25" height="24" viewBox="0 0 25 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+									<mask id="maskComments" mask-type="alpha" maskUnits="userSpaceOnUse" x="2" y="2" width="21" height="20">
+										<path fill-rule="evenodd" clip-rule="evenodd" d="M4.3271 2H20.2486C21.3432 2 22.2388 2.9 22.2388 4V16C22.2388 17.1 21.3432 18 20.2486 18H6.31729L2.33691 22V4C2.33691 2.9 3.2325 2 4.3271 2ZM6.31729 16H20.2486V4H4.3271V18L6.31729 16Z" fill="white"/>
+									</mask>
+									<g mask="url(#maskComments)">
+										<rect x="0.34668" width="23.8823" height="24" fill="#FFFFFF"/>
+									</g>
+								</svg>
+
+								<span class="jp-carousel-has-comments-indicator" aria-label="Cette image comporte des commentaires."></span>
+							</span>
+						</a>
+											</div>
+				</div>
+				<div class="jp-carousel-info-extra">
+					<div class="jp-carousel-info-content-wrapper">
+						<div class="jp-carousel-photo-title-container">
+							<h2 class="jp-carousel-photo-title"></h2>
+						</div>
+						<div class="jp-carousel-comments-wrapper">
+															<div id="jp-carousel-comments-loading">
+									<span>Chargement des commentaires&hellip;</span>
+								</div>
+								<div class="jp-carousel-comments"></div>
+								<div id="jp-carousel-comment-form-container">
+									<span id="jp-carousel-comment-form-spinner">&nbsp;</span>
+									<div id="jp-carousel-comment-post-results"></div>
+																														<form id="jp-carousel-comment-form">
+												<label for="jp-carousel-comment-form-comment-field" class="screen-reader-text">Écrire un commentaire...</label>
+												<textarea
+													name="comment"
+													class="jp-carousel-comment-form-field jp-carousel-comment-form-textarea"
+													id="jp-carousel-comment-form-comment-field"
+													placeholder="Écrire un commentaire..."
+												></textarea>
+												<div id="jp-carousel-comment-form-submit-and-info-wrapper">
+													<div id="jp-carousel-comment-form-commenting-as">
+																													<fieldset>
+																<label for="jp-carousel-comment-form-email-field">E-mail</label>
+																<input type="text" name="email" class="jp-carousel-comment-form-field jp-carousel-comment-form-text-field" id="jp-carousel-comment-form-email-field" />
+															</fieldset>
+															<fieldset>
+																<label for="jp-carousel-comment-form-author-field">Nom</label>
+																<input type="text" name="author" class="jp-carousel-comment-form-field jp-carousel-comment-form-text-field" id="jp-carousel-comment-form-author-field" />
+															</fieldset>
+															<fieldset>
+																<label for="jp-carousel-comment-form-url-field">Site web</label>
+																<input type="text" name="url" class="jp-carousel-comment-form-field jp-carousel-comment-form-text-field" id="jp-carousel-comment-form-url-field" />
+															</fieldset>
+																											</div>
+													<input
+														type="submit"
+														name="submit"
+														class="jp-carousel-comment-form-button"
+														id="jp-carousel-comment-form-button-submit"
+														value="Laisser un commentaire" />
+												</div>
+											</form>
+																											</div>
+													</div>
+						<div class="jp-carousel-image-meta">
+							<div class="jp-carousel-title-and-caption">
+								<div class="jp-carousel-photo-info">
+									<h3 class="jp-carousel-caption" itemprop="caption description"></h3>
+								</div>
+
+								<div class="jp-carousel-photo-description"></div>
+							</div>
+							<ul class="jp-carousel-image-exif" style="display: none;"></ul>
+							<a class="jp-carousel-image-download" href="#" target="_blank" style="display: none;">
+								<svg width="25" height="24" viewBox="0 0 25 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+									<mask id="mask0" mask-type="alpha" maskUnits="userSpaceOnUse" x="3" y="3" width="19" height="18">
+										<path fill-rule="evenodd" clip-rule="evenodd" d="M5.84615 5V19H19.7775V12H21.7677V19C21.7677 20.1 20.8721 21 19.7775 21H5.84615C4.74159 21 3.85596 20.1 3.85596 19V5C3.85596 3.9 4.74159 3 5.84615 3H12.8118V5H5.84615ZM14.802 5V3H21.7677V10H19.7775V6.41L9.99569 16.24L8.59261 14.83L18.3744 5H14.802Z" fill="white"/>
+									</mask>
+									<g mask="url(#mask0)">
+										<rect x="0.870605" width="23.8823" height="24" fill="#FFFFFF"/>
+									</g>
+								</svg>
+								<span class="jp-carousel-download-text"></span>
+							</a>
+							<div class="jp-carousel-image-map" style="display: none;"></div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		</div>
+		<aside id="eu_cookie_law_widget-3" class="widget widget_eu_cookie_law_widget">
+<div
+	class="hide-on-button ads-active"
+	data-hide-timeout="30"
+	data-consent-expiration="180"
+	id="eu-cookie-law"
+	style="display: none"
+>
+	<form method="post">
+		<input type="submit" value="Fermer et accepter" class="accept" />
+
+		Confidentialité &amp; Cookies : Ce site utilise des cookies. En continuant à utiliser ce site, vous acceptez leur utilisation.<br />
+Pour en savoir davantage, y compris comment contrôler les cookies, voir :
+				<a href="https://automattic.com/cookies/" rel="nofollow">
+			Politique relative aux cookies		</a>
+ </form>
+</div>
+</aside><link crossorigin='anonymous' rel='stylesheet' id='all-css-0-2' href='https://s0.wp.com/_static/??-eJyljkkKwzAMRS9UVx2oIYvSs7i2ME7kgUjC5PZNoNlm0W4+PEk8fejN+FoEi0BW00hjKgwjSnN++jLkWrcISsjg3VyVkYB7ajibt5ZAePbMJ/jDth/tgyNhTyGiMKCu2zolNOQ6COZGTlYpy/J7I0mEwURHhPNyRNuDV35e7XAbLveHteMH1cV+Nw==&cssminify=yes' type='text/css' media='all' />
+<script type="text/javascript" id="jetpack-carousel-js-extra">
+/* <![CDATA[ */
+var jetpackSwiperLibraryPath = {"url":"https:\/\/s0.wp.com\/wp-content\/mu-plugins\/jetpack-plugin\/moon\/_inc\/build\/carousel\/swiper-bundle.min.js"};
+var jetpackCarouselStrings = {"widths":[370,700,1000,1200,1400,2000],"is_logged_in":"","lang":"fr","ajaxurl":"https:\/\/laclassedemallory.net\/wp-admin\/admin-ajax.php","nonce":"e27b0a4484","display_exif":"1","display_comments":"1","single_image_gallery":"1","single_image_gallery_media_file":"","background_color":"black","comment":"Commentaire","post_comment":"Laisser un commentaire","write_comment":"\u00c9crire un commentaire...","loading_comments":"Chargement des commentaires\u2026","download_original":"Afficher dans sa taille r\u00e9elle <span class=\"photo-size\">{0}<span class=\"photo-size-times\">\u00d7<\/span>{1}<\/span>.","no_comment_text":"Veuillez ajouter du contenu \u00e0 votre commentaire.","no_comment_email":"Merci de renseigner une adresse e-mail.","no_comment_author":"Merci de renseigner votre nom.","comment_post_error":"Une erreur s\u2019est produite \u00e0 la publication de votre commentaire. Veuillez nous en excuser, et r\u00e9essayer dans quelques instants.","comment_approved":"Votre commentaire a \u00e9t\u00e9 approuv\u00e9.","comment_unapproved":"Votre commentaire est en attente de validation.","camera":"Appareil photo","aperture":"Ouverture","shutter_speed":"Vitesse d\u2019obturation","focal_length":"Focale","copyright":"Copyright","comment_registration":"0","require_name_email":"0","login_url":"https:\/\/laclassedemallory.wordpress.com\/wp-login.php?redirect_to=https%3A%2F%2Flaclassedemallory.net%2F2021%2F07%2F16%2Fdes-jeux-du-commerce-pour-la-classe%2F","blog_id":"125038514","meta_data":["camera","aperture","shutter_speed","focal_length","copyright"],"stats_query_args":"blog=125038514&v=wpcom&tz=1&user_id=0&subd=laclassedemallory","is_public":"1"};
+/* ]]> */
+</script>
+<script crossorigin='anonymous' type='text/javascript'  src='https://s0.wp.com/_static/??-eJydkeFOwzAMhF+INCpomviBeBSUJm5x68Shduj29mSITlOFQN3Pu+Q7Xxy7ZOM5KSS1HfFgMpUBk9iF5+CCGE9OBMSO1XJKzSgP9oaJ5UqMoNn56UfbyJzsGyZvu4IULKYeEyoY8TMTrfrcREzbVH2HWGfm0lVYtQZdSuh3i/GjwHxueoKTEAaY98DR7RuW3CcOTpF3UTJhNoRpMj37IqbH0/17827mIkDXe6vx2+JuYhcMw6UPlHrKE4Iht1iFmMkpbPz76ykSBDM4ovorf6l/6q6vMkv2HDeycq/xpT22h+PjU3t4Hr8AwvYGBg=='></script>
+
+	<script type="text/javascript">
+		(function () {
+			var wpcom_reblog = {
+				source: 'toolbar',
+
+				toggle_reblog_box_flair: function (obj_id, post_id) {
+
+					// Go to site selector. This will redirect to their blog if they only have one.
+					const postEndpoint = `https://wordpress.com/post`;
+
+					// Ideally we would use the permalink here, but fortunately this will be replaced with the 
+					// post permalink in the editor.
+					const originalURL = `${ document.location.href }?page_id=${ post_id }`; 
+					
+					const url =
+						postEndpoint +
+						'?url=' +
+						encodeURIComponent( originalURL ) +
+						'&is_post_share=true' +
+						'&v=5';
+
+					const redirect = function () {
+						if (
+							! window.open( url, '_blank' )
+						) {
+							location.href = url;
+						}
+					};
+
+					if ( /Firefox/.test( navigator.userAgent ) ) {
+						setTimeout( redirect, 0 );
+					} else {
+						redirect();
+					}
+				},
+			};
+
+			window.wpcom_reblog = wpcom_reblog;
+		})();
+	</script>
+<script type="text/javascript">
+// <![CDATA[
+(function() {
+try{
+  if ( window.external &&'msIsSiteMode' in window.external) {
+    if (window.external.msIsSiteMode()) {
+      var jl = document.createElement('script');
+      jl.type='text/javascript';
+      jl.async=true;
+      jl.src='/wp-content/plugins/ie-sitemode/custom-jumplist.php';
+      var s = document.getElementsByTagName('script')[0];
+      s.parentNode.insertBefore(jl, s);
+    }
+  }
+}catch(e){}
+})();
+// ]]>
+</script>		<script type="text/javascript">
+			(function() {
+				var extend = function(out) {
+					out = out || {};
+
+					for (var i = 1; i < arguments.length; i++) {
+						if (!arguments[i])
+						continue;
+
+						for (var key in arguments[i]) {
+						if (arguments[i].hasOwnProperty(key))
+							out[key] = arguments[i][key];
+						}
+					}
+
+					return out;
+				};
+				extend( window.infiniteScroll.settings.scripts, ["mobile-useragent-info","rlt-proxy","jquery-core","jquery-migrate","jquery","media-video-jwt-bridge","cmp-script-stub","wpcom-actionbar-placeholder","grofiles-cards","wpgroho","wordads-smart","the-neverending-homepage","button-flexslider","button","button-navigation","button-skip-link-focus-fix","jetpack-carousel","eu-cookie-law-script","tiled-gallery","carousel-wpcom"] );
+				extend( window.infiniteScroll.settings.styles, ["wordads-global","the-neverending-homepage","wp-block-library","mediaelement","wp-mediaelement","jetpack-layout-grid","jetpack-ratings","coblocks-frontend","wpcom-core-compat-playlist-styles","wpcom-text-widget-styles","wpcom-bbpress2-staff-css","button-style","genericons","button-wpcom","jetpack-top-posts-widget","wpcom_instagram_widget","jetpack-widget-social-icons-styles","geo-location-flair","reblogging","a8c-global-print","h4-global","wp-emoji-styles","videopress-video-style","jetpack-sharing-buttons-style","classic-theme-styles","global-styles","button-fonts","jetpack-global-styles-frontend-style","jetpack-carousel-swiper-css","jetpack-carousel","eu-cookie-law-style","tiled-gallery","core-block-supports-duotone"] );
+			})();
+		</script>
+				<span id="infinite-aria" aria-live="polite"></span>
+		<script src="//stats.wp.com/w.js?67" defer></script> <script type="text/javascript">
+_tkq = window._tkq || [];
+_stq = window._stq || [];
+_tkq.push(['storeContext', {'blog_id':'125038514','blog_tz':'1','user_lang':'fr','blog_lang':'fr','user_id':'0'}]);
+_stq.push(['view', {'blog':'125038514','v':'wpcom','tz':'1','user_id':'0','subd':'laclassedemallory'}]);
+		_stq.push(['extra', {'crypt':'UE5VTUIlVktzQVNtcFdrRlVoJUNZcTJRQnxOUXdPbkF2SC9lR04uMmgrV015Q01QdE4lOHpwek14SDIwflMzdEtWUVZwP34lRndvQUZLQzRmNlFVMzExfjJMLTVsUX5CUm9bMVdBZi9wSVJWJUg3RFdtW0MwazZoND9KZWZxXzgxY3RHaWtUTmpUVDhBb2tfeWc4c1tIMmp5OHMxQiVlWUhHPSx3ZD9LN3dBci9NSV8zTFdXOG41R3NINVdyXzU2dTBnU0o0YWw1dSZKRnZnZyY4R3FSNiZkNixvRjRnQlJFQz9jRXcsNj9FSVhuV0ZSMDNrLFg3Zi1Iazcla1dzZWZ4WCt2Z101bC1fTERZUm80ejlYTTEvYXFidw=='}]);
+_stq.push([ 'clickTrackerInit', '125038514', '0' ]);
+</script>
+<noscript><img src="https://pixel.wp.com/b.gif?v=noscript" style="height:1px;width:1px;overflow:hidden;position:absolute;bottom:1px;" alt="" /></noscript>
+<script>
+if ( 'object' === typeof wpcom_mobile_user_agent_info ) {
+
+	wpcom_mobile_user_agent_info.init();
+	var mobileStatsQueryString = "";
+	
+	if( false !== wpcom_mobile_user_agent_info.matchedPlatformName )
+		mobileStatsQueryString += "&x_" + 'mobile_platforms' + '=' + wpcom_mobile_user_agent_info.matchedPlatformName;
+	
+	if( false !== wpcom_mobile_user_agent_info.matchedUserAgentName )
+		mobileStatsQueryString += "&x_" + 'mobile_devices' + '=' + wpcom_mobile_user_agent_info.matchedUserAgentName;
+	
+	if( wpcom_mobile_user_agent_info.isIPad() )
+		mobileStatsQueryString += "&x_" + 'ipad_views' + '=' + 'views';
+
+	if( "" != mobileStatsQueryString ) {
+		new Image().src = document.location.protocol + '//pixel.wp.com/g.gif?v=wpcom-no-pv' + mobileStatsQueryString + '&baba=' + Math.random();
+	}
+	
+}
+</script>
+</body>
+</html>
+<!--
+	generated in 0.518 seconds
+	171470 bytes batcached for 300 seconds
+-->
